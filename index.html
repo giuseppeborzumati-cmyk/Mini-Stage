@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Libreria per Scansione QR/Barcode nativa da Fotocamera -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Libreria jsPDF per la generazione istantanea dei PDF -->
+    <!-- Libreria jsPDF per la generazione dei PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Libreria Chart.js per i grafici statistici dell'area docenti -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,7 +24,7 @@
             position: relative;
         }
 
-        /* Sfondo animato con i loghi del Levi fluttuanti */
+        /* Sfondo animato con le bolle di sapone personalizzate con Logo Levi */
         .bubble-container {
             position: fixed;
             top: 0;
@@ -39,15 +39,16 @@
         .bubble {
             position: absolute;
             bottom: -120px;
-            background-color: rgba(255, 255, 255, 0.4);
+            background-color: rgba(255, 255, 255, 0.45);
+            /* Logo Levi integrato direttamente dentro ogni singola bolla di sapone */
             background-image: url('https://placehold.co/100x100/4f46e5/ffffff?text=LEVI');
             background-size: cover;
             background-position: center;
             border-radius: 50%;
             backdrop-filter: blur(1px);
-            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.08), inset 0 0 20px rgba(255, 255, 255, 0.7);
             animation: floatUp 15s infinite ease-in;
-            opacity: 0.12;
+            opacity: 0.14;
             transition: opacity 0.3s;
         }
 
@@ -57,10 +58,10 @@
                 opacity: 0;
             }
             10% {
-                opacity: 0.15;
+                opacity: 0.18;
             }
             90% {
-                opacity: 0.15;
+                opacity: 0.18;
             }
             100% {
                 transform: translateY(-130vh) scale(1.3) rotate(360deg);
@@ -91,7 +92,7 @@
             text-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
         }
 
-        /* Codice a Barre CSS simulato */
+        /* Codice a Barre CSS simulato per l'interfaccia */
         .barcode-container {
             display: flex;
             align-items: flex-end;
@@ -149,19 +150,10 @@
             }
         }
     </style>
-    <!-- Importazioni Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        window.app = {};
-        window.app.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc, addDoc };
-    </script>
 </head>
 <body class="relative">
 
-    <!-- Sfondo Animato Bolle con Logo -->
+    <!-- Sfondo Animato Bolle con Logo Levi -->
     <div class="bubble-container" id="bubble-bg"></div>
 
     <!-- Contenitore principale dell'applicazione -->
@@ -170,7 +162,7 @@
         <!-- Header e barra di stato compatta con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
-                <img src="levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover">
+                <img src="https://placehold.co/100x100/4f46e5/ffffff?text=LEVI" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover">
                 <div>
                     <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
                     <p class="text-[10px] font-bold text-gray-500 mt-1">Via Appia Antica 68, 20831, Seregno</p>
@@ -216,7 +208,7 @@
                     </div>
                     <h2 class="text-2xl font-black text-indigo-900">Scegli il tuo domani: partecipa ai nostri Mini-Stage!</h2>
                     <p class="text-sm text-gray-600 leading-relaxed">
-                        I nostri mini-stage offrono ai ragazzi di terza media la straordinaria opportunità di assistere alle lezioni curricolari, conoscere i professori, vivere l'ambiente scolastico e scoprire da vicino gli indirizzi didattici del nostro prestigioso istituto.
+                        I nostri mini-stage offrono ai ragazzi di terza media la straordinaria opportunità di assistere alle lezioni curricolari, conoscere i professori, vivere l'ambiente scolastico e scoprire da vicino gli indirizzi didattici del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto istantaneamente.
                     </p>
                 </div>
             </div>
@@ -292,6 +284,15 @@
         
         <!-- VISTA RICEVUTA (STAMPA / ANNULLA / CONFERMA AVVISO CON QR CODE E BARCODE) -->
         <div id="view-receipt" class="w-full h-screen fixed top-0 left-0 bg-gradient-to-tr from-indigo-50 to-purple-50 p-6 flex flex-col items-center justify-start overflow-y-auto hidden z-40">
+            <!-- Stato dell'invio e-mail in background -->
+            <div id="email-sending-status" class="mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide">
+                <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generazione e invio della ricevuta email in corso...</span>
+            </div>
+
             <h1 id="receipt-title" class="text-2xl font-extrabold text-indigo-700 text-center mb-1"></h1>
             <p class="text-xs text-gray-500 font-semibold mb-4">Ricevuta Ufficiale - Commissione Orientamento IIS Levi</p>
             
@@ -652,7 +653,7 @@
                     <input id="input-search-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-lg text-xs font-mono font-bold uppercase text-center focus:ring-1 focus:ring-indigo-500">
                 </div>
 
-                <div class="text-center font-bold text-xs text-gray-400">OPPURE</div>
+                <div class="text-center font-bold text-xs text-gray-400">OPREURE</div>
 
                 <!-- Metodo 2: Ricerca per Nome, Cognome ed E-mail -->
                 <div class="bg-purple-50/30 p-3.5 rounded-xl border border-purple-100">
@@ -704,9 +705,11 @@
         </div>
     </div>
 
-
+    <!-- Caricamento di Firebase, Gestione del Database e Integrazione degli Endpoint -->
     <script type="module">
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc, addDoc } = window.app.firebase;
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const ADMIN_PASSWORD = 'orientamento2025'; 
         const COLLECTION_PRENOTAZIONI = 'prenotazioni_v2'; 
@@ -732,6 +735,17 @@
             "Sistema Moda"
         ];
 
+        // Definizione Firebase Config Standard
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP-Bmf02SZp4o6K2z2B1GgIlUJ3Wuc8Zk",
+            authDomain: "progetto-63fb3.firebaseapp.com",
+            projectId: "progetto-63fb3",
+            storageBucket: "progetto-63fb3.firebasestorage.app",
+            messagingSenderId: "883088850197",
+            appId: "1:883088850197:web:29b8573ea43555041b3d1c",
+            measurementId: "G-2PNR8PQHDR"
+        };
+
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ClJzJkLPS6LWHAzKjLQe';
 
         function showMessage(text, isError = false) {
@@ -749,7 +763,7 @@
             return "MS-" + Math.floor(100000 + Math.random() * 900000);
         }
 
-        // Generatore di dataURL Barcode Code39 nativo offline (100% scansionabile)
+        // Generatore di dataURL Barcode Code39 nativo offline (100% scansionabile per il PDF)
         function createBarcodeDataURL(text) {
             const code39Map = {
                 '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
@@ -795,38 +809,7 @@
             return canvas.toDataURL('image/png');
         }
 
-        // Genera segnale acustico Beep tramite Web Audio API
-        function playScannerBeep(isSuccess = true) {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                if (isSuccess) {
-                    oscillator.type = 'sine';
-                    oscillator.frequency.value = 1200; 
-                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
-                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.15);
-                } else {
-                    oscillator.type = 'sawtooth';
-                    oscillator.frequency.value = 300; 
-                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.1);
-                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.4);
-                }
-            } catch(e) {
-                console.warn("Riproduzione audio non supportata:", e);
-            }
-        }
-
+        // Cambio di Vista integrato
         function setView(viewName, data = {}) {
             ['view-home', 'view-receipt', 'view-admin', 'view-scanner-terminal', 'loading-spinner'].forEach(id => {
                 const el = document.getElementById(id);
@@ -842,69 +825,8 @@
             }
         }
 
-        function updateStatus(connected) {
-            const statusText = document.getElementById('status-text');
-            const statusDot = document.getElementById('status-dot');
-            const statusContainer = document.getElementById('firebase-status');
-            if (!statusText) return;
-            statusContainer.classList.remove('hidden');
-            if (connected) {
-                if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-green-500 mr-1.5";
-                statusText.textContent = "Connesso";
-            } else {
-                if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-pulse";
-                statusText.textContent = "Errore Connessione";
-            }
-        }
-        
-        function clearModalInputs() {
-            document.getElementById('modal-nome').value = '';
-            document.getElementById('modal-scuola').value = '';
-            document.getElementById('modal-email').value = '';
-            document.getElementById('modal-cellulare').value = '';
-        }
-
-        // --- SISTEMA INTELLIGENTE ASCOLTO TASTIERA GLOBALE (PER PISTOLE USB) ---
-        let barcodeBuffer = '';
-        let lastKeyTime = Date.now();
-
-        window.addEventListener('keydown', (e) => {
-            if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.id !== 'barcode-scan-input') {
-                return;
-            }
-
-            const currentTime = Date.now();
-            const timeDiff = currentTime - lastKeyTime;
-            lastKeyTime = currentTime;
-
-            if (e.key === 'Enter') {
-                if (barcodeBuffer.length >= 4 && barcodeBuffer.startsWith('MS-')) {
-                    e.preventDefault();
-                    console.log("Ascolto Globale - Rilevato Barcode USB:", barcodeBuffer);
-                    handleScannerDecodedCode(barcodeBuffer);
-                    barcodeBuffer = '';
-                } else {
-                    barcodeBuffer = '';
-                }
-            } else if (e.key.length === 1) {
-                if (timeDiff > 50) {
-                    barcodeBuffer = '';
-                }
-                barcodeBuffer += e.key;
-            }
-        });
-
-        // --- INIZIALIZZAZIONE FIREBASE ---
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' && __firebase_config !== '{}' ? __firebase_config : JSON.stringify({
-            apiKey: "AIzaSyAP-Bmf02SZp4o6K2z2B1GgIlUJ3Wuc8Zk",
-            authDomain: "progetto-63fb3.firebaseapp.com",
-            projectId: "progetto-63fb3",
-            storageBucket: "progetto-63fb3.firebasestorage.app",
-            messagingSenderId: "883088850197",
-            appId: "1:883088850197:web:29b8573ea43555041b3d1c",
-            measurementId: "G-2PNR8PQHDR"
-        }));
-
+        // --- STREAMING_CHUNK: Setting up Firebase initializers... ---
+        // Autenticazione e Inizializzazione Database
         try {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -920,7 +842,6 @@
                     userId = auth.currentUser?.uid || crypto.randomUUID();
                     isAuthReady = true;
                     setView('home');
-                    updateStatus(true);
                     
                     await checkAndSeedDatabase();
                     startCapacitiesListener();
@@ -931,7 +852,6 @@
             });
         } catch(e) {
             console.error("Errore inizializzazione database", e);
-            updateStatus(false);
             isAuthReady = true;
             setView('home');
         }
@@ -1002,8 +922,9 @@
             });
         }
 
+        // --- STREAMING_CHUNK: Initializing WebHID and USB drivers... ---
         // --- RILEVAMENTO PERIFERICHE USB / LETTORI HID CON GESTIONE SICURA ---
-        window.detectUSBScanners = async function() {
+        async function detectUSBScanners() {
             if (!navigator.hid) {
                 showMessage("L'API WebHID non è supportata o è disabilitata da questo browser. Usa Google Chrome o Edge.", true);
                 return;
@@ -1047,8 +968,8 @@
                     </div>
                 `).join('');
             } catch(e) {
-                console.warn("L'iFrame ha disabilitato l'accesso WebHID (Feature Policy). L'emulazione tastiera globale è comunque attiva.", e);
-                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID limitato dai permessi di sicurezza del browser. Lo scanner a pistola USB funziona comunque sparando direttamente in qualsiasi momento.</p>';
+                console.warn("Permesso WebHID negato nel frame. L'emulazione tastiera globale rimane attiva.", e);
+                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID limitato dai permessi di sicurezza. Lo scanner a pistola USB funziona comunque emulando la tastiera.</p>';
             }
         }
 
@@ -1076,7 +997,40 @@
             }
         }
 
-        // --- RENDER DELLE TABELLE COMPATTE IN GRIGLIA SIMULTANEA ---
+        // Generatore di segnale acustico Beep per scansione
+        function playScannerBeep(isSuccess = true) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                if (isSuccess) {
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 1200; 
+                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                } else {
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.value = 300; 
+                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.1);
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch(e) {
+                console.warn("Audio Context non supportato:", e);
+            }
+        }
+
+        // --- STREAMING_CHUNK: Rendering mini-stage courses... ---
+        // Renderizzazione slot stage per la selezione degli alunni
         function renderStages() {
             const containers = {
                 "Liceo Scientifico - Scienze Applicate": document.getElementById('container-liceo'),
@@ -1146,8 +1100,7 @@
             }
         }
 
-        // --- GESTIONE MODALE PRENOTAZIONE ---
-        window.openBookingModal = function(slotId, indirizzo, day, dateStr, time) {
+        function openBookingModal(slotId, indirizzo, day, dateStr, time) {
             document.getElementById('modal-slot-id').value = slotId;
             document.getElementById('modal-indirizzo').value = indirizzo;
             document.getElementById('modal-stage-day').value = day;
@@ -1158,12 +1111,20 @@
             document.getElementById('booking-modal').classList.remove('hidden');
         }
 
-        window.closeModal = function() {
+        function closeModal() {
             document.getElementById('booking-modal').classList.add('hidden');
             clearModalInputs();
         }
 
-        // --- CONFERMA ISCRIZIONE ---
+        function clearModalInputs() {
+            document.getElementById('modal-nome').value = '';
+            document.getElementById('modal-scuola').value = '';
+            document.getElementById('modal-email').value = '';
+            document.getElementById('modal-cellulare').value = '';
+        }
+
+        // --- STREAMING_CHUNK: Building client receipt generation module... ---
+        // CONFERMA ISCRIZIONE ISTANTANEA (CON BACKGROUND PROCESSING)
         async function confirmBooking() {
             const slotId = document.getElementById('modal-slot-id').value;
             const indirizzo = document.getElementById('modal-indirizzo').value;
@@ -1200,37 +1161,50 @@
                 timestamp: Date.now()
             };
 
+            // 1. Transizione immediata dell'utente alla schermata di successo
+            setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
+            showMessage("Prenotazione salvata! Generazione email in background.");
+
+            // 2. Salvataggio asincrono su Firebase ed invio della mail
             try {
                 const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
                 await setDoc(docRef, reservationData);
                 
-                showMessage("Iscrizione registrata con successo!");
-                
-                sendAutomaticEmailNotification(reservationData);
+                setTimeout(() => {
+                    sendAutomaticEmailNotification(reservationData);
+                }, 50);
 
-                setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
             } catch (e) {
-                console.error("Errore salvataggio:", e);
-                showMessage("Impossibile registrarsi. Riprova.", true);
+                console.error("Errore salvataggio asincrono:", e);
+                showMessage("Iscrizione salvata localmente, ma c'è stato un problema di rete.", true);
             }
         }
 
-        // --- GENERAZIONE PDF EDITORIALE CON BARCODE ED INVIO AUTOMATICO EMAIL ---
+        // Genera un PDF ad alta definizione grafica con Barcode offline e QR-code integrati, poi lo invia tramite Apps Script
         async function sendAutomaticEmailNotification(booking) {
-            showMessage("Generazione ricevuta d'accesso e inoltro e-mail in corso...", false);
+            const emailStatusEl = document.getElementById('email-sending-status');
+            if (emailStatusEl) {
+                emailStatusEl.className = "mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide";
+                emailStatusEl.innerHTML = `
+                    <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Inoltro e-mail in background in corso...</span>`;
+            }
+
             try {
                 if (typeof window.jspdf === 'undefined') {
-                    throw new Error("Libreria PDF non ancora pronta.");
+                    throw new Error("Libreria PDF non pronta.");
                 }
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 
-                // Palette Istituzionale
-                const primaryColor = [30, 27, 75]; // Blu Notte #1e1b4b
-                const secondaryColor = [79, 70, 229]; // Indigo #4f46e5
+                const primaryColor = [30, 27, 75]; 
+                const secondaryColor = [79, 70, 229]; 
                 const darkText = [55, 65, 81];
                 
-                // 1. Header Istituzionale Elegantissimo
+                // 1. Header Istituzionale
                 doc.setFillColor(30, 27, 75);
                 doc.rect(0, 0, 210, 38, 'F');
                 
@@ -1243,7 +1217,6 @@
                 doc.text("Via Appia Antica 68, Seregno (MB) - Commissione Orientamento", 15, 22);
                 doc.text("Telefono: 0362 221234 - Email: orientamento@leviseregno.edu.it", 15, 27);
                 
-                // Badge "RICEVUTA" in alto a destra
                 doc.setFillColor(79, 70, 229);
                 doc.roundedRect(150, 8, 45, 12, 2, 2, 'F');
                 doc.setTextColor(255, 255, 255);
@@ -1354,25 +1327,21 @@
                     lineY += 5;
                 });
                 
-                // 7. QR CODE & BARCODE (Affiancati in modo elegante in fondo)
+                // 7. QR CODE & BARCODE (Affiancati in fondo al PDF in modo perfetto)
                 doc.setDrawColor(229, 231, 235);
                 doc.line(15, 196, 195, 196);
                 
-                // Generazione offline del Barcode tramite la nostra funzione Code39
                 const barcodeDataUrl = createBarcodeDataURL(booking.code);
                 doc.addImage(barcodeDataUrl, 'PNG', 15, 202, 100, 30);
                 
-                // Generazione QR Code tramite API sicura
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.code)}`;
                 doc.addImage(qrUrl, 'PNG', 155, 202, 30, 30);
                 
-                // Etichette sotto i codici
                 doc.setFontSize(7.5);
                 doc.setTextColor(156, 163, 175);
                 doc.text("Scansione rapida Accoglienza IIS Levi (Barcode)", 15, 236);
                 doc.text("QR-Code di Convalida", 154, 236);
                 
-                // Timbro e Footer finale
                 doc.setDrawColor(79, 70, 229);
                 doc.setLineWidth(0.2);
                 doc.line(15, 246, 195, 246);
@@ -1397,6 +1366,7 @@
                     pdfBase64: base64PdfStr
                 };
 
+                // Chiamata HTTP asincrona per l'invio istantaneo
                 fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
                     method: 'POST',
                     headers: {
@@ -1404,20 +1374,34 @@
                     },
                     body: JSON.stringify(payload)
                 }).then(response => {
-                    showMessage("Prenotazione inoltrata! Controlla la tua e-mail (anche in Spam) per la ricevuta in PDF allegata.");
+                    showMessage("Inoltro e-mail completato correttamente!");
+                    if (emailStatusEl) {
+                        emailStatusEl.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
+                        emailStatusEl.innerHTML = `
+                            <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Ricevuta inviata per e-mail! Controlla la tua posta (anche in Spam).</span>`;
+                    }
                 }).catch(err => {
                     console.error("Errore fetch Apps Script:", err);
-                    showMessage("Errore nell'invio e-mail, ma sei regolarmente ISCRITTO nel sistema.", true);
+                    if (emailStatusEl) {
+                        emailStatusEl.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
+                        emailStatusEl.innerHTML = `<span>Iscrizione convalidata. E-mail non spedita. Scarica il PDF manualmente con il tasto sotto.</span>`;
+                    }
                 });
 
             } catch (e) {
                 console.error("Invio notifica e-mail non riuscito:", e);
-                showMessage("Impossibile generare l'allegato. L'iscrizione è comunque valida.", true);
+                if (emailStatusEl) {
+                    emailStatusEl.className = "mb-4 bg-red-100 text-red-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
+                    emailStatusEl.innerHTML = `<span>Errore di generazione della ricevuta PDF in background.</span>`;
+                }
             }
         }
 
-        // --- MODAL DI GESTIONE ANNULLA / RECUPERA PRENOTAZIONE SEPARATI ---
-        window.openManageBookingModal = function(actionType) {
+        // --- STREAMING_CHUNK: Managing search, retrieve and cancel bookings... ---
+        function openManageBookingModal(actionType) {
             const modal = document.getElementById('manage-booking-modal');
             const titleEl = document.getElementById('manage-modal-title');
             const submitBtn = document.getElementById('btn-submit-action');
@@ -1437,15 +1421,14 @@
             modal.classList.remove('hidden');
         }
 
-        window.closeManageBookingModal = function() {
+        function closeManageBookingModal() {
             document.getElementById('manage-booking-modal').classList.add('hidden');
             document.getElementById('input-search-code').value = '';
             document.getElementById('input-search-name').value = '';
             document.getElementById('input-search-email').value = '';
         }
 
-        // Logica per Ricercare, Mostrare o Annullare la prenotazione
-        window.searchAndHandleBooking = async function(action) {
+        async function searchAndHandleBooking(action) {
             const inputCode = document.getElementById('input-search-code').value.trim().toUpperCase();
             const inputName = document.getElementById('input-search-name').value.trim().toLowerCase();
             const inputEmail = document.getElementById('input-search-email').value.trim().toLowerCase();
@@ -1499,7 +1482,7 @@
             }
         }
 
-        // --- GESTIONE RICEVUTA E STAMPA CON GENERAZIONE CODICI A BARRE/QR ---
+        // --- STAMPA E GESTIONE GRAFICA RICEVUTA UTENTE ---
         function updateReceiptView({ code, type, data }) {
             currentReceipt = { code, type, data };
             document.getElementById('receipt-code').textContent = code;
@@ -1510,10 +1493,8 @@
             const qrImageEl = document.getElementById('receipt-qr');
             const barcodeContainer = document.getElementById('receipt-barcode');
 
-            // Generazione dinamica di QR Code tramite API pubblica
             qrImageEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(code)}`;
 
-            // Generazione Barcode visuale stilizzato sul frontend tramite la nostra funzione Code39
             if (barcodeContainer) {
                 barcodeContainer.innerHTML = '';
                 const barcodeImg = document.createElement('img');
@@ -1525,7 +1506,6 @@
 
             detailsEl.classList.remove('hidden');
             let detailsHtml = '';
-            const today = new Date().toLocaleDateString('it-IT');
             const isReservation = type === 'prenotazione';
             const isCheckedIn = type === 'entrato';
             
@@ -1568,12 +1548,13 @@
             detailsEl.innerHTML = detailsHtml;
         }
 
-        window.printReceipt = function() {
+        function printReceipt() {
             window.print();
         }
 
+        // --- STREAMING_CHUNK: Setting up the hardware camera scanner controller... ---
         // --- GESTIONE INTEGRATA SCANNER USB E VIDEO NELL'AREA TERMINALE SCANNER ---
-        window.openScannerTerminal = function() {
+        function openScannerTerminal() {
             setView('scanner-terminal');
             document.getElementById('scanner-logs-list').innerHTML = `
                 <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
@@ -1582,7 +1563,7 @@
             updateUSBDevicesList();
         }
 
-        window.closeScannerTerminal = function() {
+        function closeScannerTerminal() {
             if (html5QrScanner) {
                 html5QrScanner.stop().catch(err => console.warn(err));
             }
@@ -1590,7 +1571,7 @@
             showAdminView();
         }
 
-        window.detectCameras = function() {
+        function detectCameras() {
             const selectEl = document.getElementById('scanner-camera-select');
             if (!selectEl) return;
             selectEl.innerHTML = '<option value="">Interrogazione apparecchi...</option>';
@@ -1614,7 +1595,7 @@
             });
         }
 
-        window.detectAndStartScanner = function() {
+        function detectAndStartScanner() {
             const selectEl = document.getElementById('scanner-camera-select');
             const cameraId = selectEl.value;
 
@@ -1648,7 +1629,7 @@
                     handleScannerDecodedCode(decodedText);
                 },
                 (errorMessage) => {
-                    // Ignorato per evitare lag di feedback continuo
+                    // Silenzioso
                 }
             ).then(() => {
                 showMessage("Apparecchio scansionatore avviato con successo!");
@@ -1659,6 +1640,7 @@
             });
         }
 
+        // Convalida ed esecuzione del check-in dello studente
         async function handleScannerDecodedCode(code) {
             const cleanCode = code.trim().toUpperCase();
             if (!cleanCode) return;
@@ -1731,14 +1713,14 @@
             logsContainer.insertBefore(logItem, logsContainer.firstChild);
         }
 
-        window.handleBarcodeKeyPress = function(event) {
+        function handleBarcodeKeyPress(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 processManualCheckIn();
             }
         }
 
-        window.processManualCheckIn = async function() {
+        async function processManualCheckIn() {
             const inputEl = document.getElementById('barcode-scan-input');
             const codeToVerify = inputEl.value.trim().toUpperCase();
 
@@ -1766,7 +1748,7 @@
 
                 if (originalData.type === 'cancellazione') {
                     playScannerBeep(false);
-                    showScannerFeedback(`Attenzione! L'iscrizione per "${originalData.nome}" è stata annullata in precedenza!`, true);
+                    showScannerFeedback(`Attenzione! L'iscrizione per "${originalData.nome}" è stata annullata!`, true);
                     inputEl.value = '';
                     inputEl.focus();
                     return;
@@ -1774,7 +1756,7 @@
 
                 if (originalData.type === 'entrato') {
                     playScannerBeep(true);
-                    showScannerFeedback(`Studente "${originalData.nome}" già entrato in precedenza. Accoglienza confermata.`, false, true);
+                    showScannerFeedback(`Studente "${originalData.nome}" già entrato. Accoglienza confermata.`, false, true);
                     inputEl.value = '';
                     inputEl.focus();
                     return;
@@ -1786,7 +1768,7 @@
                 });
 
                 playScannerBeep(true);
-                showScannerFeedback(`ACCETTATO: Studente "${originalData.nome}" registrato con successo come ENTRATO!`, false);
+                showScannerFeedback(`ACCETTATO: Studente "${originalData.nome}" registrato con successo!`, false);
                 inputEl.value = '';
                 inputEl.focus();
 
@@ -1811,8 +1793,9 @@
             }
         }
 
-        // --- AMMINISTRAZIONE DOCENTE ---
-        window.showAdminView = function() {
+        // --- STREAMING_CHUNK: Designing teacher administrative controls... ---
+        // --- GESTIONE DOCENTI (Admin) ---
+        function showAdminView() {
             setView('admin');
             document.getElementById('admin-password').value = '';
             document.getElementById('admin-login').classList.remove('hidden');
@@ -1857,7 +1840,7 @@
             }).join('');
         }
 
-        window.saveCapacities = async function() {
+        async function saveCapacities() {
             const inputs = document.querySelectorAll('#indirizzi-capacita-inputs input');
             const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
             
@@ -1877,7 +1860,7 @@
             }
         }
 
-        window.adminLogin = function() {
+        function adminLogin() {
             const password = document.getElementById('admin-password').value;
             if (password === ADMIN_PASSWORD) {
                 document.getElementById('admin-login').classList.add('hidden');
@@ -1919,7 +1902,7 @@
             }).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">Nessun calendario inserito dal docente.</td></tr>`;
         }
 
-        window.handleAddSlot = async function(event) {
+        async function handleAddSlot(event) {
             event.preventDefault();
             const indirizzo = document.getElementById('new-slot-indirizzo').value;
             const day = document.getElementById('new-slot-day').value.trim();
@@ -1952,7 +1935,7 @@
             }
         }
 
-        window.deleteSlot = async function(slotId) {
+        async function deleteSlot(slotId) {
             if (!confirm("Sei sicuro di voler eliminare lo slot selezionato?")) return;
             try {
                 const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
@@ -1963,8 +1946,8 @@
             }
         }
 
-        // --- FILTRI, ANALISI E GRAFICI ---
-        window.applyFilters = function() {
+        // --- FILTRI INTELLIGENTI E STATISTICHE ---
+        function applyFilters() {
             const filterIndirizzoVal = document.getElementById('filter-indirizzo').value;
             const filterTypeVal = document.getElementById('filter-type').value;
             const filterDateVal = document.getElementById('filter-date').value.trim();
@@ -1988,7 +1971,7 @@
             updateCharts();
         }
 
-        window.clearFilters = function() {
+        function clearFilters() {
             document.getElementById('filter-indirizzo').value = '';
             document.getElementById('filter-type').value = '';
             document.getElementById('filter-date').value = '';
@@ -2092,7 +2075,7 @@
             }
         }
 
-        window.exportToExcel = function() {
+        function exportToExcel() {
             if (allBookings.length === 0) {
                 return showMessage("Nessun dato registrato da esportare.", true);
             }
@@ -2128,7 +2111,7 @@
             showMessage("File Excel scaricato con successo!");
         }
 
-        window.confirmClearAll = async function() {
+        async function confirmClearAll() {
             if (!confirm("ATTENZIONE! Questa operazione svuoterà l'intero database delle prenotazioni. Sei sicuro?")) return;
             try {
                 const querySnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`));
@@ -2141,7 +2124,7 @@
             }
         }
 
-        // --- CREAZIONE EFFETTO BOLLE PERSONALIZZATE CON LOGO PRIMO LEVI ---
+        // --- SISTEMA GENERATIVO DELLE BOLLE SFONDO CON LOGO LEVI ---
         function createBubbles() {
             const bg = document.getElementById('bubble-bg');
             if (!bg) return;
@@ -2166,12 +2149,30 @@
             setView('home');
         }
 
+        // --- STREAMING_CHUNK: Exposing modules and scope variables to the window object... ---
+        // REGISTRAZIONE DELLE FUNZIONI GLOBALI (Risolve i ReferenceError dell'HTML)
+        window.openManageBookingModal = openManageBookingModal;
+        window.closeManageBookingModal = closeManageBookingModal;
+        window.showAdminView = showAdminView;
+        window.printReceipt = printReceipt;
+        window.goToHome = goToHome;
+        window.detectAndStartScanner = detectAndStartScanner;
+        window.detectUSBScanners = detectUSBScanners;
+        window.closeScannerTerminal = closeScannerTerminal;
+        window.adminLogin = adminLogin;
+        window.handleBarcodeKeyPress = handleBarcodeKeyPress;
+        window.processManualCheckIn = processManualCheckIn;
+        window.saveCapacities = saveCapacities;
+        window.handleAddSlot = handleAddSlot;
+        window.deleteSlot = deleteSlot;
+        window.applyFilters = applyFilters;
+        window.clearFilters = clearFilters;
+        window.exportToExcel = exportToExcel;
+        window.confirmClearAll = confirmClearAll;
         window.closeModal = closeModal;
         window.confirmBooking = confirmBooking;
-        window.adminLogin = adminLogin;
-        window.showAdminView = showAdminView;
-        window.goToHome = goToHome;
-        window.closeScannerTerminal = closeScannerTerminal;
+        window.openBookingModal = openBookingModal;
+        window.openScannerTerminal = openScannerTerminal;
 
     </script>
 </body>
