@@ -3,23 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prenotazione Mini Stage Orientamento</title>
+    <title>Prenotazione Mini Stage Orientamento - IIS Primo Levi</title>
     <!-- Caricamento di Tailwind CSS e Font Inter -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Libreria per Scansione QR/Barcode nativa da Fotocamera -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Libreria jsPDF per la generazione istantanea dei PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Libreria Chart.js per i grafici statistici dell'area docenti -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 100%);
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f3e8ff 100%);
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
         }
 
-        /* Sfondo animato a bolle */
+        /* Sfondo animato con i loghi del Levi fluttuanti */
         .bubble-container {
             position: fixed;
             top: 0;
@@ -33,12 +38,17 @@
 
         .bubble {
             position: absolute;
-            bottom: -100px;
-            background: rgba(255, 255, 255, 0.4);
+            bottom: -120px;
+            background-color: rgba(255, 255, 255, 0.4);
+            background-image: url('https://placehold.co/100x100/4f46e5/ffffff?text=LEVI');
+            background-size: cover;
+            background-position: center;
             border-radius: 50%;
-            backdrop-filter: blur(2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.5);
-            animation: floatUp 12s infinite ease-in;
+            backdrop-filter: blur(1px);
+            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.6);
+            animation: floatUp 15s infinite ease-in;
+            opacity: 0.12;
+            transition: opacity 0.3s;
         }
 
         @keyframes floatUp {
@@ -47,31 +57,31 @@
                 opacity: 0;
             }
             10% {
-                opacity: 0.8;
+                opacity: 0.15;
             }
             90% {
-                opacity: 0.8;
+                opacity: 0.15;
             }
             100% {
-                transform: translateY(-120vh) scale(1.2) rotate(360deg);
+                transform: translateY(-130vh) scale(1.3) rotate(360deg);
                 opacity: 0;
             }
         }
 
         /* Glassmorphism Cards */
         .glass-card {
-            background: rgba(255, 255, 255, 0.82);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
             border-radius: 1.25rem;
-            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.06);
+            box-shadow: 0 10px 35px rgba(79, 70, 229, 0.05);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .glass-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 38px rgba(79, 70, 229, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(79, 70, 229, 0.08);
         }
 
         .full-screen-code {
@@ -86,10 +96,10 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            height: 60px;
+            height: 65px;
             background: white;
-            padding: 8px;
-            border-radius: 6px;
+            padding: 10px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
 
@@ -145,20 +155,13 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Carica Chart.js per l'area Docente
-        (function() {
-            const chartScript = document.createElement('script');
-            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            document.head.appendChild(chartScript);
-        })();
-
         window.app = {};
         window.app.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc, addDoc };
     </script>
 </head>
 <body class="relative">
 
-    <!-- Sfondo Animato Bolle -->
+    <!-- Sfondo Animato Bolle con Logo -->
     <div class="bubble-container" id="bubble-bg"></div>
 
     <!-- Contenitore principale dell'applicazione -->
@@ -167,7 +170,7 @@
         <!-- Header e barra di stato compatta con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
-                <img src="levi.png" alt="Logo" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
+                <img src="levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover">
                 <div>
                     <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
                     <p class="text-[10px] font-bold text-gray-500 mt-1">Via Appia Antica 68, 20831, Seregno</p>
@@ -199,31 +202,27 @@
         </div>
 
         <!-- Messaggi popup personalizzati -->
-        <div id="message-box" class="fixed top-4 right-4 bg-green-500 text-white font-bold p-4 rounded-xl shadow-2xl hidden transition-all duration-300 z-50 transform translate-y-2"></div>
+        <div id="message-box" class="fixed top-4 right-4 bg-green-500 text-white p-4 rounded-xl shadow-2xl hidden transition-all duration-300 z-50 transform translate-y-2"></div>
         
-        <!-- VISTA HOME PRINCIPALE (COMPATTATA) -->
+        <!-- VISTA HOME PRINCIPALE -->
         <div id="view-home" class="w-full max-w-6xl hidden space-y-4">
             
-            <!-- Descrizione del Ministage ultra compattata -->
-            <div class="glass-card p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex-1 text-gray-700 space-y-1">
+            <!-- Descrizione del Ministage -->
+            <div class="glass-card p-5 flex flex-col md:flex-row justify-between items-center gap-4 border-l-4 border-indigo-600">
+                <div class="flex-1 text-gray-700 space-y-1.5">
                     <div class="flex items-center space-x-2">
-                        <span class="bg-indigo-100 text-indigo-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Mini-Stage Orientamento</span>
-                        <span class="text-xs font-bold text-gray-400">Commissione Orientamento</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Esperienza Immersiva Scuola-Futuro</span>
+                        <span class="text-xs font-bold text-gray-400">IIS Primo Levi</span>
                     </div>
-                    <h2 class="text-lg font-black text-indigo-800">Prenota un giorno nelle nostre classi superiori!</h2>
-                    <p class="text-xs text-gray-500">I mini-stage permettono di assistere a lezioni curricolari, comprendere i metodi e l'ambiente.</p>
-                </div>
-                <div class="bg-red-50 border-l-4 border-red-500 p-2.5 rounded-r-lg max-w-md w-full md:w-auto">
-                    <p class="text-[10px] font-bold text-red-700">
-                        DATE IN VIA DI DEFINIZIONE. POTRETE PRENOTARE TRAMITE IL LINK CARICATO SU QUESTA PAGINA APPENA DISPONIBILE.
+                    <h2 class="text-2xl font-black text-indigo-900">Scegli il tuo domani: partecipa ai nostri Mini-Stage!</h2>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        I nostri mini-stage offrono ai ragazzi di terza media la straordinaria opportunità di assistere alle lezioni curricolari, conoscere i professori, vivere l'ambiente scolastico e scoprire da vicino gli indirizzi didattici del nostro prestigioso istituto.
                     </p>
                 </div>
             </div>
 
             <!-- SEZIONE TABELLE COMPATTE IN GRIGLIA SIMULTANEA (2 per riga) -->
             <div class="space-y-4">
-                <!-- Griglia delle Tabelle Compatte (Due per riga insieme su schermi grandi) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
                     <!-- 1. Liceo Scientifico -->
@@ -270,7 +269,7 @@
                         </div>
                     </div>
 
-                    <!-- 5. Sistema Moda (In Griglia per bilanciare l'aspetto visivo) -->
+                    <!-- 5. Sistema Moda -->
                     <div class="glass-card p-3 flex flex-col h-[230px] md:col-span-2 max-w-2xl mx-auto w-full">
                         <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-center">
                             <span class="w-2 h-2 rounded-full bg-pink-500 mr-2 animate-pulse"></span>
@@ -718,12 +717,12 @@
         let db, auth, userId = null;
         let isAuthReady = false;
         let currentReceipt = { code: '', type: '', data: {} };
-        let allBookings = []; // Archivio di tutti i dati dal DB
-        let stageSlots = [];  // Configurazioni degli stage salvate dal docente
-        let bookingsMap = {}; // Mappa {slotId: count} per i posti disponibili
-        let capacitiesConfig = {}; // Mappa {indirizzo: postiMax} caricata dal DB
+        let allBookings = []; 
+        let stageSlots = [];  
+        let bookingsMap = {}; 
+        let capacitiesConfig = {}; 
         let chartInstance = null;
-        let html5QrScanner = null; // Scanner QR Code fotocamera
+        let html5QrScanner = null; 
 
         const INDIRIZZI_MAPPING = [
             "Liceo Scientifico - Scienze Applicate",
@@ -750,6 +749,52 @@
             return "MS-" + Math.floor(100000 + Math.random() * 900000);
         }
 
+        // Generatore di dataURL Barcode Code39 nativo offline (100% scansionabile)
+        function createBarcodeDataURL(text) {
+            const code39Map = {
+                '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
+                '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
+                '8': '110100101101', '9': '101100101101', 'A': '110101001011', 'B': '101101001011',
+                'C': '110110100101', 'D': '101011001011', 'E': '110101100101', 'F': '101101100101',
+                'G': '101010011011', 'H': '110101001101', 'I': '101101001101', 'J': '101011001101',
+                'K': '110101010011', 'L': '101101010011', 'M': '110110101001', 'N': '101011010011',
+                'O': '110101101001', 'P': '101101101001', 'Q': '101010110011', 'R': '110101011001',
+                'S': '101101011001', 'T': '101011011001', 'U': '110010101011', 'V': '100110101011',
+                'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
+                '-': '100101011011', '*': '100101101101'
+            };
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const fullText = `*${text}*`;
+            
+            let binaryString = '';
+            for (let i = 0; i < fullText.length; i++) {
+                const char = fullText[i].toUpperCase();
+                if (code39Map[char]) {
+                    binaryString += code39Map[char] + '0'; 
+                }
+            }
+
+            const barWidth = 3; 
+            canvas.width = binaryString.length * barWidth + 60; 
+            canvas.height = 90;
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#000000';
+            let x = 30; 
+            for (let i = 0; i < binaryString.length; i++) {
+                if (binaryString[i] === '1') {
+                    ctx.fillRect(x, 15, barWidth, 60);
+                }
+                x += barWidth;
+            }
+
+            return canvas.toDataURL('image/png');
+        }
+
         // Genera segnale acustico Beep tramite Web Audio API
         function playScannerBeep(isSuccess = true) {
             try {
@@ -762,7 +807,7 @@
                 
                 if (isSuccess) {
                     oscillator.type = 'sine';
-                    oscillator.frequency.value = 1200; // Beep acuto di successo
+                    oscillator.frequency.value = 1200; 
                     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
                     gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
                     gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
@@ -770,7 +815,7 @@
                     oscillator.stop(audioCtx.currentTime + 0.15);
                 } else {
                     oscillator.type = 'sawtooth';
-                    oscillator.frequency.value = 300; // Errore o fallimento
+                    oscillator.frequency.value = 300; 
                     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
                     gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.1);
                     gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
@@ -819,7 +864,7 @@
             document.getElementById('modal-cellulare').value = '';
         }
 
-        // --- SISTEMA INTELLIGENTE ASCOLTO TASTIERA GLOBALE (PER PISTOLE USB KEYBOARD EMULATOR) ---
+        // --- SISTEMA INTELLIGENTE ASCOLTO TASTIERA GLOBALE (PER PISTOLE USB) ---
         let barcodeBuffer = '';
         let lastKeyTime = Date.now();
 
@@ -1041,17 +1086,14 @@
                 "Sistema Moda": document.getElementById('container-moda')
             };
 
-            // Pulizia
             Object.values(containers).forEach(c => { if(c) c.innerHTML = ''; });
 
-            // Raggruppamento e ordinamento degli slot
             const grouped = {};
             stageSlots.forEach(slot => {
                 if(!grouped[slot.indirizzo]) grouped[slot.indirizzo] = [];
                 grouped[slot.indirizzo].push(slot);
             });
 
-            // Se non ci sono date inserite dal docente, mostriamo un avviso chiaro in ogni colonna
             INDIRIZZI_MAPPING.forEach(ind => {
                 const container = containers[ind];
                 if (container && (!grouped[ind] || grouped[ind].length === 0)) {
@@ -1066,7 +1108,6 @@
                 const container = containers[indirizzo];
                 if (!container) continue;
 
-                // Ordinamento temporale
                 grouped[indirizzo].sort((a, b) => {
                     const [gA, mA] = a.dateStr.split('/');
                     const [gB, mB] = b.dateStr.split('/');
@@ -1160,13 +1201,11 @@
             };
 
             try {
-                // Salvataggio nel DB Firestore
                 const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
                 await setDoc(docRef, reservationData);
                 
                 showMessage("Iscrizione registrata con successo!");
                 
-                // Chiamata automatica asincrona al deployment di Google Apps Script
                 sendAutomaticEmailNotification(reservationData);
 
                 setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
@@ -1176,37 +1215,204 @@
             }
         }
 
-        // --- INVIO AUTOMATICO DELL'EMAIL TRAMITE APPS SCRIPT ---
+        // --- GENERAZIONE PDF EDITORIALE CON BARCODE ED INVIO AUTOMATICO EMAIL ---
         async function sendAutomaticEmailNotification(booking) {
+            showMessage("Generazione ricevuta d'accesso e inoltro e-mail in corso...", false);
             try {
+                if (typeof window.jspdf === 'undefined') {
+                    throw new Error("Libreria PDF non ancora pronta.");
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // Palette Istituzionale
+                const primaryColor = [30, 27, 75]; // Blu Notte #1e1b4b
+                const secondaryColor = [79, 70, 229]; // Indigo #4f46e5
+                const darkText = [55, 65, 81];
+                
+                // 1. Header Istituzionale Elegantissimo
+                doc.setFillColor(30, 27, 75);
+                doc.rect(0, 0, 210, 38, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(22);
+                doc.text("IIS PRIMO LEVI - SEREGNO", 15, 16);
+                doc.setFontSize(10);
+                doc.setFont("Helvetica", "normal");
+                doc.text("Via Appia Antica 68, Seregno (MB) - Commissione Orientamento", 15, 22);
+                doc.text("Telefono: 0362 221234 - Email: orientamento@leviseregno.edu.it", 15, 27);
+                
+                // Badge "RICEVUTA" in alto a destra
+                doc.setFillColor(79, 70, 229);
+                doc.roundedRect(150, 8, 45, 12, 2, 2, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("RICEVUTA UFFICIALE", 152, 16);
+                
+                // 2. Titolo del Documento
+                doc.setTextColor(30, 27, 75);
+                doc.setFontSize(15);
+                doc.setFont("Helvetica", "bold");
+                doc.text("CONFERMA PRENOTAZIONE MINI-STAGE", 15, 52);
+                
+                doc.setDrawColor(229, 231, 235);
+                doc.setLineWidth(0.5);
+                doc.line(15, 56, 195, 56);
+                
+                // 3. Blocco Informazioni Dati Studente (Card a sinistra)
+                doc.setFillColor(249, 250, 251);
+                doc.roundedRect(15, 62, 85, 65, 3, 3, 'F');
+                doc.setDrawColor(229, 231, 235);
+                doc.roundedRect(15, 62, 85, 65, 3, 3, 'S');
+                
+                doc.setTextColor(79, 70, 229);
+                doc.setFontSize(11);
+                doc.setFont("Helvetica", "bold");
+                doc.text("DATI STUDENTE", 22, 69);
+                
+                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+                doc.setFontSize(9);
+                doc.setFont("Helvetica", "bold");
+                doc.text("Nome Studente:", 22, 77);
+                doc.setFont("Helvetica", "normal");
+                doc.text(booking.nome, 22, 81);
+                
+                doc.setFont("Helvetica", "bold");
+                doc.text("Scuola di Provenienza:", 22, 88);
+                doc.setFont("Helvetica", "normal");
+                doc.text(booking.scuola, 22, 92);
+                
+                doc.setFont("Helvetica", "bold");
+                doc.text("Contatti Registrati:", 22, 99);
+                doc.setFont("Helvetica", "normal");
+                doc.text("Email: " + booking.email, 22, 103);
+                doc.text("Cellulare: " + booking.cellulare, 22, 107);
+                
+                // 4. Blocco Informazioni Dettaglio Stage (Card a destra)
+                doc.setFillColor(245, 243, 255);
+                doc.roundedRect(108, 62, 87, 65, 3, 3, 'F');
+                doc.setDrawColor(221, 214, 254);
+                doc.roundedRect(108, 62, 87, 65, 3, 3, 'S');
+                
+                doc.setTextColor(30, 27, 75);
+                doc.setFontSize(11);
+                doc.setFont("Helvetica", "bold");
+                doc.text("DETTAGLIO ATTIVITÀ", 115, 69);
+                
+                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+                doc.setFontSize(9);
+                doc.setFont("Helvetica", "bold");
+                doc.text("Indirizzo di Studio Scelto:", 115, 77);
+                doc.setFont("Helvetica", "bold");
+                doc.setTextColor(79, 70, 229);
+                doc.text(booking.indirizzo, 115, 81);
+                
+                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+                doc.setFont("Helvetica", "bold");
+                doc.text("Giorno dello Stage:", 115, 88);
+                doc.setFont("Helvetica", "normal");
+                doc.text(booking.stageDay + " " + booking.stageDate, 115, 92);
+                
+                doc.setFont("Helvetica", "bold");
+                doc.text("Orario Curricolare:", 115, 99);
+                doc.setFont("Helvetica", "normal");
+                doc.text(booking.stageTime, 115, 103);
+                
+                // 5. Blocco Codice Unico
+                doc.setFillColor(243, 244, 246);
+                doc.roundedRect(15, 134, 180, 16, 2, 2, 'F');
+                doc.setTextColor(30, 27, 75);
+                doc.setFontSize(11);
+                doc.setFont("Helvetica", "bold");
+                doc.text("CODICE PRENOTAZIONE UNIVOCO:", 25, 144);
+                doc.setFontSize(14);
+                doc.setFont("Courier", "bold");
+                doc.setTextColor(220, 38, 38);
+                doc.text(booking.code, 125, 144);
+                
+                // 6. Istruzioni e Note di Ammissione
+                doc.setTextColor(30, 27, 75);
+                doc.setFontSize(10);
+                doc.setFont("Helvetica", "bold");
+                doc.text("ISTRUZIONI IMPORTANTI PER L'ACCESSO ALL'ISTITUTO:", 15, 161);
+                
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.setTextColor(107, 114, 128);
+                const istruzioni = [
+                    "- Presentarsi all'ingresso principale almeno 10 minuti prima dell'inizio delle lezioni.",
+                    "- Mostrare obbligatoriamente questo foglio all'addetto d'accoglienza (stampato o su smartphone).",
+                    "- Lo scanner della Commissione convaliderà istantaneamente il Barcode / QR-Code qui sotto riportato.",
+                    "- In caso di impossibilità a partecipare, vi invitiamo ad annullare tempestivamente la prenotazione sul",
+                    "  nostro portale per permettere ad altri ragazzi in lista d'attesa di partecipare all'esperienza."
+                ];
+                let lineY = 167;
+                istruzioni.forEach(line => {
+                    doc.text(line, 15, lineY);
+                    lineY += 5;
+                });
+                
+                // 7. QR CODE & BARCODE (Affiancati in modo elegante in fondo)
+                doc.setDrawColor(229, 231, 235);
+                doc.line(15, 196, 195, 196);
+                
+                // Generazione offline del Barcode tramite la nostra funzione Code39
+                const barcodeDataUrl = createBarcodeDataURL(booking.code);
+                doc.addImage(barcodeDataUrl, 'PNG', 15, 202, 100, 30);
+                
+                // Generazione QR Code tramite API sicura
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.code)}`;
+                doc.addImage(qrUrl, 'PNG', 155, 202, 30, 30);
+                
+                // Etichette sotto i codici
+                doc.setFontSize(7.5);
+                doc.setTextColor(156, 163, 175);
+                doc.text("Scansione rapida Accoglienza IIS Levi (Barcode)", 15, 236);
+                doc.text("QR-Code di Convalida", 154, 236);
+                
+                // Timbro e Footer finale
+                doc.setDrawColor(79, 70, 229);
+                doc.setLineWidth(0.2);
+                doc.line(15, 246, 195, 246);
+                
+                doc.setTextColor(156, 163, 175);
+                doc.setFontSize(8);
+                doc.text("Documento convalidato digitalmente dalla Commissione Orientamento dell'Istituto Superiore Primo Levi Seregno.", 15, 252);
+                doc.text("Data di emissione: " + new Date().toLocaleDateString('it-IT') + " alle ore " + new Date().toLocaleTimeString('it-IT'), 15, 256);
+                
+                const dataUri = doc.output('datauristring');
+                const base64PdfStr = dataUri.split(',')[1]; 
+
+                const nameParts = booking.nome.trim().split(' ');
+                const first = nameParts[0] || '';
+                const rest = nameParts.slice(1).join(' ') || '';
+
                 const payload = {
                     email: booking.email,
-                    nome: booking.nome,
-                    codice: booking.code,
-                    indirizzo: booking.indirizzo,
-                    giorno: booking.stageDay,
-                    data: booking.stageDate,
-                    orario: booking.stageTime,
-                    scuola: booking.scuola,
-                    cellulare: booking.cellulare,
-                    firma: "Commissione Orientamento"
+                    nome: first,
+                    cognome: rest,
+                    codice_prenotazione: booking.code,
+                    pdfBase64: base64PdfStr
                 };
 
                 fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'text/plain;charset=utf-8'
                     },
                     body: JSON.stringify(payload)
-                }).then(() => {
-                    showMessage("Ti abbiamo inviato un'e-mail automatica con la tua ricevuta PDF!");
+                }).then(response => {
+                    showMessage("Prenotazione inoltrata! Controlla la tua e-mail (anche in Spam) per la ricevuta in PDF allegata.");
                 }).catch(err => {
                     console.error("Errore fetch Apps Script:", err);
+                    showMessage("Errore nell'invio e-mail, ma sei regolarmente ISCRITTO nel sistema.", true);
                 });
 
             } catch (e) {
                 console.error("Invio notifica e-mail non riuscito:", e);
+                showMessage("Impossibile generare l'allegato. L'iscrizione è comunque valida.", true);
             }
         }
 
@@ -1307,24 +1513,14 @@
             // Generazione dinamica di QR Code tramite API pubblica
             qrImageEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(code)}`;
 
-            // Generazione Barcode visuale stilizzato tramite linee ad altezza variabile
+            // Generazione Barcode visuale stilizzato sul frontend tramite la nostra funzione Code39
             if (barcodeContainer) {
                 barcodeContainer.innerHTML = '';
-                const charCodeSum = code.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                for (let i = 0; i < 42; i++) {
-                    const line = document.createElement('div');
-                    line.className = 'barcode-line';
-                    const widthIdx = (charCodeSum + i * 3) % 4;
-                    if (widthIdx === 0) line.style.width = '1px';
-                    else if (widthIdx === 1) line.style.width = '2px';
-                    else if (widthIdx === 2) line.style.width = '3px';
-                    else line.style.width = '4px';
-                    
-                    if ((i + charCodeSum) % 5 === 0) {
-                        line.style.backgroundColor = 'transparent';
-                    }
-                    barcodeContainer.appendChild(line);
-                }
+                const barcodeImg = document.createElement('img');
+                barcodeImg.src = createBarcodeDataURL(code);
+                barcodeImg.alt = "Barcode Accettazione";
+                barcodeImg.className = "h-full object-contain";
+                barcodeContainer.appendChild(barcodeImg);
             }
 
             detailsEl.classList.remove('hidden');
@@ -1377,15 +1573,11 @@
         }
 
         // --- GESTIONE INTEGRATA SCANNER USB E VIDEO NELL'AREA TERMINALE SCANNER ---
-
-        // Apre la schermata interattiva del terminale di scansione
         window.openScannerTerminal = function() {
             setView('scanner-terminal');
-            // Reset della lista delle scansioni correnti nel terminale
             document.getElementById('scanner-logs-list').innerHTML = `
                 <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
             `;
-            // Inizia il rilevamento dispositivi all'apertura
             detectCameras();
             updateUSBDevicesList();
         }
@@ -1398,7 +1590,6 @@
             showAdminView();
         }
 
-        // Rilevamento dei dispositivi di input video (apparecchio fotocamera)
         window.detectCameras = function() {
             const selectEl = document.getElementById('scanner-camera-select');
             if (!selectEl) return;
@@ -1423,7 +1614,6 @@
             });
         }
 
-        // Avvio effettivo della fotocamera/apparecchio selezionato
         window.detectAndStartScanner = function() {
             const selectEl = document.getElementById('scanner-camera-select');
             const cameraId = selectEl.value;
@@ -1455,11 +1645,10 @@
                     qrbox: { width: 250, height: 250 }
                 },
                 (decodedText, decodedResult) => {
-                    // Chiamata alla registrazione d'accesso
                     handleScannerDecodedCode(decodedText);
                 },
                 (errorMessage) => {
-                    // Silenzioso per evitare troppi log di scansione vuota
+                    // Ignorato per evitare lag di feedback continuo
                 }
             ).then(() => {
                 showMessage("Apparecchio scansionatore avviato con successo!");
@@ -1470,7 +1659,6 @@
             });
         }
 
-        // Gestione del codice scansionato dal terminale video o USB
         async function handleScannerDecodedCode(code) {
             const cleanCode = code.trim().toUpperCase();
             if (!cleanCode) return;
@@ -1502,7 +1690,6 @@
                     return;
                 }
 
-                // Esegui transazione di aggiornamento su Firestore
                 await updateDoc(doc(ref, cleanCode), {
                     type: 'entrato',
                     checkInTimestamp: Date.now()
@@ -1522,7 +1709,6 @@
             const logsContainer = document.getElementById('scanner-logs-list');
             if (!logsContainer) return;
 
-            // Rimuovi il placeholder "Nessun codice..." se presente
             if (logsContainer.querySelector('p.italic')) {
                 logsContainer.innerHTML = '';
             }
@@ -1545,7 +1731,6 @@
             logsContainer.insertBefore(logItem, logsContainer.firstChild);
         }
 
-        // Intercetta l'evento di invio o pressione tasti del lettore barcode hardware USB
         window.handleBarcodeKeyPress = function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -1553,7 +1738,6 @@
             }
         }
 
-        // Esegue l'accoglienza manuale tramite input testuale o scanner USB
         window.processManualCheckIn = async function() {
             const inputEl = document.getElementById('barcode-scan-input');
             const codeToVerify = inputEl.value.trim().toUpperCase();
@@ -1596,7 +1780,6 @@
                     return;
                 }
 
-                // Aggiornamento per marcare lo studente come "entrato"
                 await updateDoc(doc(ref, codeToVerify), {
                     type: 'entrato',
                     checkInTimestamp: Date.now()
@@ -1812,7 +1995,6 @@
             applyFilters();
         }
 
-        // Divide visivamente le prenotazioni attive, gli entrati (scansionati) e le cancellate in 3 colonne
         function renderDashboardLists(data) {
             const activeList = document.getElementById('list-active-prenotazioni');
             const checkedInList = document.getElementById('list-checkedin-prenotazioni');
@@ -1910,7 +2092,6 @@
             }
         }
 
-        // ESPORTAZIONE CERTIFICATA EXCEL (CSV COMPATIBILE CON EXCEL CON CODIFICA CORRETTA BOM UTF-8)
         window.exportToExcel = function() {
             if (allBookings.length === 0) {
                 return showMessage("Nessun dato registrato da esportare.", true);
@@ -1918,7 +2099,6 @@
 
             const headers = ["Codice", "Stato", "Indirizzo", "Giorno", "Data Stage", "Orario Stage", "Nome Studente", "Scuola Provenienza", "Email", "Cellulare", "Data Registrazione"];
             
-            // Inizializzazione CSV con il BOM UTF-8 (\uFEFF) per l'apertura immediata in Excel italiano senza problemi di accenti
             let csvContent = "\uFEFF" + headers.join(";") + "\n";
             
             allBookings.forEach(item => {
@@ -1935,7 +2115,6 @@
                     item.cellulare || '',
                     new Date(item.timestamp).toLocaleString('it-IT')
                 ];
-                // Sostituzione di eventuali virgolette interne
                 csvContent += row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(";") + "\n";
             });
 
@@ -1962,20 +2141,21 @@
             }
         }
 
-        // --- CREAZIONE EFFETTO BOLLE IN JAVASCRIPT ---
+        // --- CREAZIONE EFFETTO BOLLE PERSONALIZZATE CON LOGO PRIMO LEVI ---
         function createBubbles() {
             const bg = document.getElementById('bubble-bg');
             if (!bg) return;
-            const bubbleCount = 12;
+            bg.innerHTML = '';
+            const bubbleCount = 14;
             for (let i = 0; i < bubbleCount; i++) {
                 const bubble = document.createElement('div');
                 bubble.classList.add('bubble');
-                const size = Math.random() * 80 + 30;
+                const size = Math.random() * 75 + 45; 
                 bubble.style.width = `${size}px`;
                 bubble.style.height = `${size}px`;
                 bubble.style.left = `${Math.random() * 100}%`;
-                bubble.style.animationDelay = `${Math.random() * 8}s`;
-                bubble.style.animationDuration = `${Math.random() * 6 + 10}s`;
+                bubble.style.animationDelay = `${Math.random() * 10}s`;
+                bubble.style.animationDuration = `${Math.random() * 8 + 12}s`;
                 bg.appendChild(bubble);
             }
         }
