@@ -52,7 +52,7 @@
         }
 
         @keyframes floatUp {
-            0% {
+            0 {
                 transform: translateY(0) scale(1) rotate(0deg);
                 opacity: 0;
             }
@@ -103,12 +103,6 @@
             border: 1px solid #e2e8f0;
         }
 
-        .barcode-line {
-            background-color: black;
-            height: 100%;
-            margin: 0 1px;
-        }
-
         /* Custom Scrollbar per le tabelle compatte */
         .compact-scroll::-webkit-scrollbar {
             width: 6px;
@@ -150,7 +144,6 @@
         }
     </style>
     
-    <!-- Importazione Firebase e Registrazione window asincrona -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -169,7 +162,6 @@
 
     <div id="app" class="relative z-10 flex-grow flex flex-col items-center justify-start p-4 md:p-6 min-h-screen">
         
-        <!-- Header e barra di stato con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
                 <img id="header-logo" src="Levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
@@ -182,7 +174,6 @@
                     <p class="text-[9px] font-bold text-indigo-400 tracking-wider uppercase">Commissione Orientamento</p>
                 </div>
             </div>
-            <!-- Pulsanti in colonna impilati ordinatamente -->
             <div class="flex flex-col gap-1.5 w-full sm:w-auto">
                 <div class="flex flex-row gap-2 w-full">
                     <button onclick="window.openManageBookingModal('retrieve')" class="flex-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
@@ -209,10 +200,8 @@
         <!-- Messaggi popup personalizzati -->
         <div id="message-box" class="fixed top-4 right-4 bg-green-500 text-white p-4 rounded-xl shadow-2xl hidden transition-all duration-300 z-50 transform translate-y-2"></div>
         
-        <!-- VISTA HOME PRINCIPALE -->
         <div id="view-home" class="w-full max-w-6xl hidden space-y-4">
             
-            <!-- Descrizione del Ministage -->
             <div class="glass-card p-5 flex flex-col md:flex-row justify-between items-center gap-4 border-l-4 border-indigo-600">
                 <div class="flex-1 text-gray-700 space-y-1.5">
                     <div class="flex items-center space-x-2">
@@ -226,7 +215,7 @@
                 </div>
             </div>
 
-            <!-- SEZIONE TABELLE COMPATTE IN GRIGLIA SIMULTANEA -->
+            <!-- Griglia dei calendari didattici caricati da Firebase -->
             <div class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
@@ -293,16 +282,13 @@
                 </div>
             </div>
 
-            <!-- Footer compatto -->
             <footer class="w-full flex justify-between items-center py-3 border-t border-indigo-100/50 text-[10px] text-gray-400">
                 <p>&copy; Commissione Orientamento Primo Levi - Seregno</p>
                 <p>Sistema Convalida Digitale</p>
             </footer>
         </div>
         
-        <!-- VISTA RICEVUTA -->
         <div id="view-receipt" class="w-full h-screen fixed top-0 left-0 bg-gradient-to-tr from-indigo-50 to-purple-50 p-6 flex flex-col items-center justify-start overflow-y-auto hidden z-40">
-            <!-- Stato dell'invio e-mail in background -->
             <div id="email-sending-status" class="mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide">
                 <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -322,7 +308,7 @@
                     <div class="barcode-container w-64" id="receipt-barcode"></div>
                 </div>
 
-                <!-- QR Code Reale per una scansione tramite smartphone -->
+                <!-- QR Code Reale per scansione tramite smartphone -->
                 <div class="flex flex-col items-center py-2">
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">QR-Code Registrazione</p>
                     <img id="receipt-qr" src="" alt="QR Code" class="w-32 h-32 border border-gray-100 p-1.5 rounded-lg bg-white shadow-sm">
@@ -338,12 +324,10 @@
                     * IL DOCUMENTO DI CONFERMA È OBBLIGATORIO PORTARLO CON SÉ (STAMPATO O SU SMARTPHONE) PER ESSERE AMMESSI ALLO STAGE.
                 </p>
 
-                <!-- Dettagli della prenotazione per la visualizzazione/stampa -->
                 <div id="receipt-details" class="w-full border-t border-gray-100 pt-3 space-y-1.5 text-[11px] text-gray-700"></div>
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full pt-2 print-hide">
                     <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m-5.88-5.88l-2.12 2.12M12 8.75V15M10 11.5h4"></path></svg>
                         Stampa o Salva PDF
                     </button>
                     <button onclick="window.goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
@@ -353,7 +337,6 @@
             </div>
         </div>
 
-        <!-- VISTA DOCENTE (Admin) -->
         <div id="view-admin" class="w-full max-w-6xl hidden space-y-6">
             <!-- Box Login -->
             <div id="admin-login" class="glass-card w-full max-w-md mx-auto p-6 text-center space-y-4">
@@ -392,7 +375,7 @@
                             <h3 class="text-md font-black text-indigo-900 flex items-center">
                                 Accettazione Rapida / Registrazione Presenza
                             </h3>
-                            <p class="text-xs text-gray-500">Inserisci il codice prenotazione o usa uno scanner barcode collegato (emulatore di tastiera).</p>
+                            <p class="text-xs text-gray-500">Inserisci il codice prenotazione o usa uno scanner barcode collegato.</p>
                         </div>
                         <div class="w-full md:w-auto flex items-center space-x-2">
                             <input id="barcode-scan-input" type="text" placeholder="Es. MS-123456" class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="window.handleBarcodeKeyPress(event)">
@@ -404,7 +387,6 @@
                     <div id="scanner-feedback" class="mt-3 text-xs font-bold text-center hidden p-2 rounded-lg"></div>
                 </div>
 
-                <!-- PANNELLO PROMEMORIA -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div class="glass-card p-5 col-span-1 md:col-span-2 space-y-4 border-l-4 border-purple-500 bg-purple-50/20">
                         <h3 class="text-md font-black text-purple-900 flex items-center">
@@ -462,7 +444,6 @@
                     </div>
                 </div>
 
-                <!-- CONFIGURAZIONE POSTI PER INDIRIZZO E AGGIUNTA SLOT -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div class="glass-card p-5 lg:col-span-1 space-y-3 bg-gradient-to-br from-indigo-50/40 to-white/90">
                         <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Impostazione Posti (Capacità)</h3>
@@ -640,7 +621,6 @@
                 </div>
             </div>
 
-            <!-- Box di anteprima webcam -->
             <div class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-100 bg-gray-50 rounded-xl p-4 min-h-[250px] relative">
                 <div id="scanner-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
                 <div id="scanner-idle-placeholder" class="text-center space-y-2 p-6">
@@ -665,7 +645,6 @@
             <p class="text-xs text-gray-500 mb-4">Trova la tua iscrizione per procedere.</p>
 
             <div class="space-y-4">
-                <!-- Ricerca per Codice -->
                 <div class="bg-indigo-50/30 p-3.5 rounded-xl border border-indigo-100">
                     <label class="block text-[10px] font-extrabold text-indigo-700 uppercase mb-1">Cerca tramite Codice</label>
                     <input id="input-search-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-lg text-xs font-mono font-bold uppercase text-center focus:ring-1 focus:ring-indigo-500">
@@ -673,7 +652,6 @@
 
                 <div class="text-center font-bold text-xs text-gray-400">OPPURE</div>
 
-                <!-- Ricerca per Dati Anagrafici -->
                 <div class="bg-purple-50/30 p-3.5 rounded-xl border border-purple-100">
                     <label class="block text-[10px] font-extrabold text-purple-700 uppercase mb-1">Cerca con i tuoi Dati</label>
                     <input id="input-search-name" type="text" placeholder="Nome e Cognome Studente" class="w-full p-2.5 mb-2 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
@@ -720,7 +698,6 @@
         </div>
     </div>
 
-    <!-- Script del modulo principale dell'applicazione -->
     <script type="module">
         const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, updateDoc } = window.firebaseImports;
 
@@ -771,6 +748,7 @@
 
         let userId = null;
         let isAuthReady = false;
+        let isInitialLoad = true; // Flag fondamentale per evitare bug di ritorno automatico alla Home
 
         let allBookings = []; 
         let stageSlots = [];  
@@ -779,7 +757,7 @@
         let reminderDaysConfig = 7; 
         let chartInstance = null;
         let manageActionType = 'retrieve';
-        let html5QrScanner = null; // Aggiunto per lo scanner
+        let html5QrScanner = null;
 
         // Esposizione funzioni per l'interfaccia
         window.goToHome = function() {
@@ -895,8 +873,6 @@
                         await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 5 });
                     }
                 }
-                // ATTENZIONE: La logica che aggiungeva MOCK_SLOTS_SEED in automatico è stata rimossa,
-                // così i calendari eliminati non torneranno mai più in automatico da soli.
             } catch(e) {
                 console.error("Errore verifica seeding database:", e);
             }
@@ -934,7 +910,8 @@
                 snap.forEach(d => {
                     const b = { id: d.id, ...d.data() };
                     list.push(b);
-                    if (b.type === 'prenotazione') {
+                    // RILEVANTE: Sia gli studenti prenotati in attesa che quelli già "entrati" (presenti) occupano un posto!
+                    if (b.type === 'prenotazione' || b.type === 'entrato') {
                         bMap[b.slotId] = (bMap[b.slotId] || 0) + 1;
                     }
                 });
@@ -943,8 +920,14 @@
                 
                 const spinner = document.getElementById('loading-spinner');
                 if (spinner) spinner.classList.add('hidden');
-                window.setView('home');
                 
+                // IMPORTANTE: Cambia visualizzazione alla Home SOLO al caricamento iniziale
+                if (isInitialLoad) {
+                    window.setView('home');
+                    isInitialLoad = false;
+                }
+                
+                window.renderStages();
                 window.calculateReminderEligibility();
                 window.calculateCertificateEligibility();
                 window.applyFilters(); 
@@ -988,7 +971,7 @@
 
                     const isFull = remaining <= 0;
                     const actionButton = isFull 
-                        ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed">Completo</span>`
+                        ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed text-center">Completo</span>`
                         : `<button onclick="window.openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md font-sans">Prenota</button>`;
 
                     return `
@@ -1487,7 +1470,6 @@
             }
         };
 
-        // --- FUNZIONI DELLO SCANNER RIPRISTINATE ---
         window.openScannerTerminal = function() {
             window.setView('scanner-terminal');
             const logsList = document.getElementById('scanner-logs-list');
@@ -1513,10 +1495,19 @@
             });
         };
 
-        window.detectAndStartScanner = function() {
+        window.detectAndStartScanner = async function() {
             document.getElementById('scanner-idle-placeholder').classList.add('hidden');
             const readerEl = document.getElementById('scanner-reader');
             readerEl.innerHTML = '';
+
+            // Ferma eventuali istanze dello scanner precedentemente attive per sbloccare la camera
+            if (html5QrScanner) {
+                try {
+                    await html5QrScanner.stop();
+                } catch(e) {
+                    console.warn("Scanner spento o non avviato.");
+                }
+            }
 
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length > 0) {
