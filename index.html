@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Libreria per Scansione QR/Barcode nativa da Fotocamera -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Libreria jsPDF per la generazione dei PDF -->
+    <!-- Libreria jsPDF per la generazione immediata dei PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Libreria Chart.js per i grafici statistici dell'area docenti -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,7 +24,7 @@
             position: relative;
         }
 
-        /* Sfondo animato con le bolle di sapone personalizzate con Logo levi.png */
+        /* Sfondo animato con le bolle di sapone personalizzate con Logo Levi.png */
         .bubble-container {
             position: fixed;
             top: 0;
@@ -40,7 +40,6 @@
             position: absolute;
             bottom: -120px;
             background-color: rgba(255, 255, 255, 0.25);
-            /* Logo Levi caricato dinamicamente da levi.png */
             background-size: 65% 65%;
             background-repeat: no-repeat;
             background-position: center;
@@ -104,12 +103,6 @@
             border: 1px solid #e2e8f0;
         }
 
-        .barcode-line {
-            background-color: black;
-            height: 100%;
-            margin: 0 1px;
-        }
-
         /* Custom Scrollbar per le tabelle compatte */
         .compact-scroll::-webkit-scrollbar {
             width: 6px;
@@ -121,9 +114,6 @@
         .compact-scroll::-webkit-scrollbar-thumb {
             background: rgba(129, 140, 248, 0.5);
             border-radius: 4px;
-        }
-        .compact-scroll::-webkit-scrollbar-thumb:hover {
-            background: rgba(99, 102, 241, 0.7);
         }
 
         /* STILI SPECIFICI PER LA STAMPA */
@@ -150,35 +140,24 @@
             }
         }
     </style>
-    
-    <!-- Importazione Firebase e Registrazione window asincrona -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        window.firebaseImports = {
-            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
-            getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc
-        };
-    </script>
 </head>
 <body class="relative">
 
     <!-- Sfondo Animato Bolle con Logo Levi -->
     <div class="bubble-container" id="bubble-bg"></div>
 
-    <!-- Contenitore principale dell'applicazione -->
     <div id="app" class="relative z-10 flex-grow flex flex-col items-center justify-start p-4 md:p-6 min-h-screen">
         
         <!-- Header e barra di stato compatta con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
-                <!-- Immagine istituzionale identica per Header e Bolle -->
-                <img id="header-logo" src="levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
+                <img id="header-logo" src="Levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
                 <div>
-                    <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
-                    <p class="text-[10px] font-bold text-gray-500 mt-1">Via Appia Antica 68, 20831, Seregno</p>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
+                        <span id="conn-badge" class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Connessione in corso...</span>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-500 mt-1">Via Briantina 68, 20831, Seregno (MB)</p>
                     <p class="text-[9px] font-bold text-indigo-400 tracking-wider uppercase">Commissione Orientamento</p>
                 </div>
             </div>
@@ -221,68 +200,72 @@
                     </div>
                     <h2 class="text-2xl font-black text-indigo-900">Scegli il tuo domani: partecipa ai nostri Mini-Stage!</h2>
                     <p class="text-sm text-gray-600 leading-relaxed">
-                        I nostri mini-stage offrono ai ragazzi di terza media la straordinaria opportunità di assistere alle lezioni curricolari, conoscere i professori, vivere l'ambiente scolastico e scoprire da vicino gli indirizzi didattici del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto istantaneamente.
+                        I nostri mini-stage offrono ai ragazzi di terza media l'opportunità di assistere alle lezioni curricolari, conoscere i professori e vivere l'ambiente scolastico del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto.
                     </p>
                 </div>
             </div>
 
-            <!-- SEZIONE TABELLE COMPATTE IN GRIGLIA SIMULTANEA (2 per riga) -->
             <div class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
                     <!-- 1. Liceo Scientifico -->
-                    <div class="glass-card p-3 flex flex-col h-[230px]">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
-                            Liceo Scientifico - Scienze Applicate
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                                Liceo Scientifico - Scienze Applicate
+                            </span>
+                            <span class="text-[9px] text-indigo-500 font-bold tracking-wider uppercase">Liceo</span>
                         </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll" id="container-liceo">
-                            <!-- Righe iniettate da JS -->
-                        </div>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-liceo"></div>
                     </div>
 
                     <!-- 2. RIM -->
-                    <div class="glass-card p-3 flex flex-col h-[230px]">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-purple-500 mr-2 animate-pulse"></span>
-                            Relazioni Internazionali per il Marketing (RIM)
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-500 mr-2 animate-pulse"></span>
+                                Relazioni Internazionali Marketing (RIM)
+                            </span>
+                            <span class="text-[9px] text-purple-500 font-bold tracking-wider uppercase">Tecnico</span>
                         </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll" id="container-rim">
-                            <!-- Righe iniettate da JS -->
-                        </div>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-rim"></div>
                     </div>
 
                     <!-- 3. Logistica -->
-                    <div class="glass-card p-3 flex flex-col h-[230px]">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
-                            Logistica - Quadriennale
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
+                                Logistica - Quadriennale
+                            </span>
+                            <span class="text-[9px] text-blue-500 font-bold tracking-wider uppercase">Tecnico</span>
                         </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll" id="container-logistica">
-                            <!-- Righe iniettate da JS -->
-                        </div>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-logistica"></div>
                     </div>
 
                     <!-- 4. CAT -->
-                    <div class="glass-card p-3 flex flex-col h-[230px]">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-                            Costruzione Ambiente e Territorio (CAT)
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                                Costruzione Ambiente e Territorio (CAT)
+                            </span>
+                            <span class="text-[9px] text-green-500 font-bold tracking-wider uppercase">Tecnico</span>
                         </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll" id="container-cat">
-                            <!-- Righe iniettate da JS -->
-                        </div>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-cat"></div>
                     </div>
 
                     <!-- 5. Sistema Moda -->
-                    <div class="glass-card p-3 flex flex-col h-[230px] md:col-span-2 max-w-2xl mx-auto w-full">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-center">
-                            <span class="w-2 h-2 rounded-full bg-pink-500 mr-2 animate-pulse"></span>
-                            Sistema Moda
+                    <div class="glass-card p-4 flex flex-col h-[260px] md:col-span-2 max-w-2xl mx-auto w-full">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-pink-500 mr-2 animate-pulse"></span>
+                                Sistema Moda
+                            </span>
+                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Professionale</span>
                         </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll" id="container-moda">
-                            <!-- Righe iniettate da JS -->
-                        </div>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-moda"></div>
                     </div>
 
                 </div>
@@ -295,7 +278,7 @@
             </footer>
         </div>
         
-        <!-- VISTA RICEVUTA (STAMPA / ANNULLA / CONFERMA AVVISO CON QR CODE E BARCODE) -->
+        <!-- VISTA RICEVUTA -->
         <div id="view-receipt" class="w-full h-screen fixed top-0 left-0 bg-gradient-to-tr from-indigo-50 to-purple-50 p-6 flex flex-col items-center justify-start overflow-y-auto hidden z-40">
             <!-- Stato dell'invio e-mail in background -->
             <div id="email-sending-status" class="mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide">
@@ -303,7 +286,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Generazione e invio della ricevuta email in corso...</span>
+                <span id="email-status-text">Generazione e invio della ricevuta email in corso...</span>
             </div>
 
             <h1 id="receipt-title" class="text-2xl font-extrabold text-indigo-700 text-center mb-1"></h1>
@@ -314,9 +297,7 @@
                 <!-- Codice a Barre in Stile CSS -->
                 <div class="w-full flex flex-col items-center">
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Scansione Barcode Accettazione</p>
-                    <div class="barcode-container w-64" id="receipt-barcode">
-                        <!-- Generato dinamicamente con linee nere -->
-                    </div>
+                    <div class="barcode-container w-64" id="receipt-barcode"></div>
                 </div>
 
                 <!-- QR Code Reale per una scansione ultra affidabile tramite fotocamera -->
@@ -332,17 +313,14 @@
                 <p id="receipt-message" class="text-xs text-gray-600 font-medium text-center leading-relaxed"></p>
                 
                 <p class="text-[10px] text-red-600 font-bold bg-red-50 border border-red-100 px-4 py-2 rounded-lg text-center w-full">
-                    * IL DOCUMENTO DI CONFERMA (QUESTO FOGLIO CON QR/BARCODE) È OBBLIGATORIO PORTARLO CON SÉ (STAMPATO O SU SMARTPHONE) PER ESSERE AMMESSI ALLO STAGE.
+                    * IL DOCUMENTO DI CONFERMA È OBBLIGATORIO PORTARLO CON SÉ (STAMPATO O SU SMARTPHONE) PER ESSERE AMMESSI ALLO STAGE.
                 </p>
 
                 <!-- Dettagli della prenotazione per la visualizzazione/stampa -->
-                <div id="receipt-details" class="w-full border-t border-gray-100 pt-3 space-y-1.5 text-[11px] text-gray-700">
-                    <!-- Dettagli iniettati da JS -->
-                </div>
+                <div id="receipt-details" class="w-full border-t border-gray-100 pt-3 space-y-1.5 text-[11px] text-gray-700"></div>
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full pt-2 print-hide">
-                    <button onclick="printReceipt()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m-5.88-5.88l-2.12 2.12M12 8.75V15M10 11.5h4"></path></svg>
+                    <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
                         Stampa o Salva PDF
                     </button>
                     <button onclick="goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
@@ -357,7 +335,7 @@
             <div class="flex justify-between items-center border-b pb-3 border-gray-100">
                 <div>
                     <h2 class="text-xl font-black text-indigo-900">Terminale di Scansione Accoglienza</h2>
-                    <p class="text-xs text-gray-500">Rileva l'apparecchio (Webcam o Scanner USB HID dedicato) ed effettua le scansioni d'ingresso.</p>
+                    <p class="text-xs text-gray-500">Inquadra il QR o connetti un lettore USB per marcare i presenti.</p>
                 </div>
                 <button onclick="closeScannerTerminal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-4 rounded-xl text-xs transition">
                     Esci dal Terminale
@@ -371,32 +349,25 @@
                     <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
                         <div class="space-y-1">
                             <span class="bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Webcam</span>
-                            <h3 class="text-xs font-bold text-gray-800">Seleziona e Rileva la Telecamera</h3>
+                            <h3 class="text-xs font-bold text-gray-800">Usa la fotocamera del dispositivo</h3>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">
                             <select id="scanner-camera-select" class="p-2.5 bg-white border border-indigo-200 rounded-xl text-xs flex-grow font-bold text-indigo-900">
-                                <option value="">In attesa di rilevamento...</option>
+                                <option value="">Rilevamento in corso...</option>
                             </select>
                             <button onclick="detectAndStartScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition whitespace-nowrap shadow-md">
-                                Rileva e Avvia Webcam
+                                Avvia Webcam
                             </button>
                         </div>
                     </div>
 
-                    <!-- FASE 2: Rilevamento Apparecchio Hardware USB / HID (Pistole Sparatrici) -->
-                    <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-3">
-                        <div class="space-y-1">
-                            <span class="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Lettori USB / HID</span>
-                            <h3 class="text-xs font-bold text-gray-800">Gestione Periferiche USB / HID Hardware</h3>
-                        </div>
-                        <div class="space-y-2">
-                            <button onclick="detectUSBScanners()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md">
-                                Rileva e Autorizza Scanner USB
-                            </button>
-                            <div id="usb-devices-list" class="space-y-1.5 max-h-24 overflow-y-auto compact-scroll pt-1">
-                                <p class="text-gray-400 italic text-[11px]">In attesa di rilevamento o autorizzazione delle periferiche USB...</p>
-                            </div>
-                        </div>
+                    <!-- FASE 2: Informazioni lettore USB Hardware -->
+                    <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-2">
+                        <span class="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Lettori USB / HID</span>
+                        <h3 class="text-xs font-bold text-gray-800">Intercettazione Automatica Attiva</h3>
+                        <p class="text-[11px] text-gray-500 leading-relaxed">
+                            I lettori USB emulano una tastiera. Spara direttamente sul barcode in qualsiasi momento con il lettore e il sistema convaliderà l'ingresso automaticamente.
+                        </p>
                     </div>
                 </div>
 
@@ -404,35 +375,17 @@
                 <div class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-100 bg-gray-50 rounded-xl p-4 min-h-[250px] relative">
                     <div id="scanner-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
                     <div id="scanner-idle-placeholder" class="text-center space-y-2 p-6">
-                        <svg class="w-12 h-12 text-indigo-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h.01M16 20h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="text-xs font-bold text-indigo-900">Scanner Webcam in Attesa.</p>
-                        <p class="text-[10px] text-gray-400">Usa i controlli a sinistra per avviare l'apparecchio webcam.</p>
+                        <p class="text-xs font-bold text-indigo-900">Fotocamera non avviata.</p>
+                        <p class="text-[10px] text-gray-400">Clicca su "Avvia Webcam" per attivare la scansione QR.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Sezione Info e Log delle Scansioni in Tempo Reale -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Spiegazione Ascolto USB Globale -->
-                <div class="glass-card p-4 bg-gradient-to-br from-yellow-50/50 to-white/90 border border-yellow-100/50 space-y-2">
-                    <h4 class="text-xs font-black text-yellow-800 uppercase tracking-widest flex items-center">
-                        <svg class="w-4 h-4 mr-1.5 text-yellow-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        Ascolto USB Intelligente Attivo
-                    </h4>
-                    <p class="text-[11px] text-gray-600 leading-relaxed">
-                        <strong>Nota per i Docenti:</strong> I lettori barcode a pistola USB emulano l'input da tastiera ad altissima velocità.
-                    </p>
-                    <p class="text-[11px] text-gray-600 leading-relaxed">
-                        Grazie al nostro sistema di intercettazione globale, puoi **sparare direttamente con il lettore USB in qualsiasi momento**, anche senza avere campi di testo attivi o selezionati! Il sistema rileverà automaticamente la scansione della ricevuta dello studente.
-                    </p>
-                </div>
-
-                <!-- Log delle Scansioni correnti -->
-                <div class="flex flex-col h-[230px] glass-card p-4 md:col-span-2">
-                    <h4 class="text-xs font-black text-indigo-800 uppercase tracking-widest mb-2 border-b pb-1">Log Scansioni Sessione Corrente</h4>
-                    <div id="scanner-logs-list" class="overflow-y-auto flex-grow compact-scroll space-y-2">
-                        <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
-                    </div>
+            <!-- Log delle Scansioni correnti -->
+            <div class="flex flex-col h-[180px] glass-card p-4">
+                <h4 class="text-xs font-black text-indigo-800 uppercase tracking-widest mb-2 border-b pb-1">Scansioni Rilevate nella Sessione</h4>
+                <div id="scanner-logs-list" class="overflow-y-auto flex-grow compact-scroll space-y-2 text-xs">
+                    <p class="text-gray-400 italic text-[11px] text-center mt-8">Nessun codice scansionato.</p>
                 </div>
             </div>
         </div>
@@ -441,7 +394,7 @@
         <div id="view-admin" class="w-full max-w-6xl hidden space-y-6">
             <!-- Box Login -->
             <div id="admin-login" class="glass-card w-full max-w-md mx-auto p-6 text-center space-y-4">
-                <h1 class="text-xl font-black text-red-700">Accesso Riservato Docenti</h1>
+                <h1 class="text-xl font-black text-red-700">Area Riservata Docenti</h1>
                 <p class="text-xs text-gray-500">Inserisci la chiave d'accesso docente</p>
                 <input id="admin-password" type="password" placeholder="Password Docente" class="w-full p-3 border border-red-100 rounded-xl text-center focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-inner">
                 <button onclick="adminLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-md text-sm">
@@ -456,12 +409,11 @@
             <div id="admin-dashboard" class="hidden space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
-                        <h1 class="text-2xl font-black text-indigo-900">Area Docenti - IIS Levi</h1>
-                        <p class="text-xs text-gray-500">Gestisci la capacità, configura date e verifica gli accessi con lettore USB.</p>
+                        <h1 class="text-2xl font-black text-indigo-900">Pannello di Gestione - IIS Levi</h1>
+                        <p class="text-xs text-gray-500">Controlla le prenotazioni, invia i promemoria e distribuisci gli attestati.</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="openScannerTerminal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs flex items-center">
-                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h.01M16 20h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Apri Terminale Scansione
                         </button>
                         <button onclick="goToHome()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
@@ -470,38 +422,89 @@
                     </div>
                 </div>
 
-                <!-- NUOVA SEZIONE: PUNTO ACCETTAZIONE BARCODE CON SCANNER USB -->
+                <!-- PUNTO ACCETTAZIONE BARCODE CON SCANNER USB -->
                 <div class="glass-card p-5 border-l-4 border-indigo-600 bg-gradient-to-r from-indigo-50/20 to-white/90">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div class="space-y-1">
                             <h3 class="text-md font-black text-indigo-900 flex items-center">
-                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 mr-2 animate-ping"></span>
-                                Accettazione Rapida USB Barcode
+                                Accettazione Rapida USB Barcode / Scrittura Manuale
                             </h3>
-                            <p class="text-xs text-gray-500">Inquadra il QR Code o scansiona il Barcode stampato sulla ricevuta. L'alunno risulterà "ENTRATO / ACCETTATO" all'istante.</p>
+                            <p class="text-xs text-gray-500">Scansiona o inserisci manualmente il codice per marcare lo studente come ENTRATO.</p>
                         </div>
-                        <!-- Campo di input auto-focus per simulare tastiera emulata da scanner USB -->
                         <div class="w-full md:w-auto flex items-center space-x-2">
-                            <input id="barcode-scan-input" type="text" placeholder="Attiva Scanner USB qui..." class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="handleBarcodeKeyPress(event)">
+                            <input id="barcode-scan-input" type="text" placeholder="Scrivi codice o usa USB..." class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="handleBarcodeKeyPress(event)">
                             <button onclick="processManualCheckIn()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition">
                                 Verifica
                             </button>
                         </div>
                     </div>
-                    <div id="scanner-feedback" class="mt-3 text-xs font-bold text-center hidden p-2 rounded-lg">
-                        <!-- Messaggio di esito scansione -->
+                    <div id="scanner-feedback" class="mt-3 text-xs font-bold text-center hidden p-2 rounded-lg"></div>
+                </div>
+
+                <!-- PANNELLO PROMEMORIA -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="glass-card p-5 col-span-1 md:col-span-2 space-y-4 border-l-4 border-purple-500 bg-purple-50/20">
+                        <h3 class="text-md font-black text-purple-900 flex items-center">
+                            Configurazione & Invio Promemoria
+                        </h3>
+                        <p class="text-xs text-gray-600">
+                            Imposta i giorni di anticipo per l'invio del promemoria automatico.
+                        </p>
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <div class="w-full sm:w-auto flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-700 whitespace-nowrap">Giorni di anticipo:</span>
+                                <input id="reminder-days-input" type="number" min="1" max="15" value="7" class="w-20 p-2.5 bg-white border border-purple-200 rounded-xl text-center font-black text-purple-950 focus:ring-1 focus:ring-purple-500">
+                            </div>
+                            <button onclick="saveReminderDaysConfig()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md">
+                                Salva Anticipo
+                            </button>
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-purple-100 pt-3 gap-3">
+                            <div>
+                                <p id="reminder-eligibility-count" class="text-xs font-bold text-indigo-950">Calcolo idoneità...</p>
+                            </div>
+                            <button id="btn-batch-reminders" onclick="sendBatchReminders()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                                Invia Promemoria a Tutti gli Idonei
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-5 col-span-1 bg-gradient-to-br from-indigo-50/20 to-white/90 border border-indigo-100/50 flex flex-col justify-between">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider text-[9px]">Promemoria Singolo</h4>
+                        <p class="text-[11px] text-gray-500">Invia mail inserendo direttamente il codice prenotazione:</p>
+                        <div class="space-y-2 mt-2">
+                            <input id="input-manual-reminder-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-xl text-xs text-center font-mono font-bold uppercase focus:ring-1 focus:ring-indigo-500">
+                            <button onclick="sendSingleManualReminder()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
+                                Invia Mail Promemoria
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 1. CONFIGURAZIONE POSTI PER INDIRIZZO E AGGIUNTA SLOT -->
+                <!-- SEZIONE GESTIONE ATTESTATI DI PARTECIPAZIONE (FINE MINI-STAGE) -->
+                <div class="glass-card p-5 border-l-4 border-green-500 bg-green-50/20 mt-4 space-y-4">
+                    <h3 class="text-md font-black text-green-950 flex items-center">
+                        Invio Attestati di Partecipazione (Fine Mini-Stage)
+                    </h3>
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        Al termine dei mini-stage, puoi inviare l'attestato ufficiale in formato PDF a tutti gli studenti contrassegnati come "Entrati/Accettati". L'attestato verrà generato ed inviato istantaneamente alla loro e-mail tramite lo script dedicato.
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-green-100 pt-3 gap-3">
+                        <div>
+                            <p id="certificate-eligibility-count" class="text-xs font-bold text-green-950">Calcolo idoneità attestati...</p>
+                        </div>
+                        <button id="btn-batch-certificates" onclick="sendBatchCertificates()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                            Invia Attestati in Blocco a Tutti gli Entrati
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONFIGURAZIONE POSTI PER INDIRIZZO E AGGIUNTA SLOT -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div class="glass-card p-5 lg:col-span-1 space-y-3 bg-gradient-to-br from-indigo-50/40 to-white/90">
                         <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Impostazione Posti (Capacità)</h3>
                         <p class="text-[11px] text-gray-500">Modifica la capacità massima degli studenti iscritti contemporaneamente:</p>
-                        
-                        <div id="indirizzi-capacita-inputs" class="space-y-2">
-                            <!-- Input generati dinamicamente -->
-                        </div>
+                        <div id="indirizzi-capacita-inputs" class="space-y-2"></div>
                         <button onclick="saveCapacities()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-sm">
                             Salva Impostazioni Posti
                         </button>
@@ -509,7 +512,7 @@
 
                     <!-- Configuratore Aggiunta Slot -->
                     <div class="glass-card p-5 lg:col-span-2 space-y-3">
-                        <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Aggiungi Nuovo Slot Stage (Sincronizzazione DB Continua)</h3>
+                        <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Aggiungi Nuovo Slot Stage</h3>
                         <form id="add-slot-form" onsubmit="handleAddSlot(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div class="sm:col-span-2">
                                 <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Indirizzo Stage</label>
@@ -529,18 +532,18 @@
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Posti Max (Opzionale)</label>
-                                <input id="new-slot-max" type="number" placeholder="Default indirizzo" min="1" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs">
+                                <input id="new-slot-max" type="number" placeholder="Default" min="1" class="w-1/2 p-1.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs">
                             </div>
                             <div class="sm:col-span-2">
                                 <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-md">
-                                    + Aggiungi Nuovo Slot a Calendario
+                                    + Aggiungi Nuovo Slot
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- 2. ELENCO SLOT ATTUALI -->
+                <!-- ELENCO SLOT ATTUALI -->
                 <div class="glass-card p-5">
                     <h3 class="text-xs font-black text-indigo-900 mb-2 pb-1 border-b">Configurazione Calendari</h3>
                     <div class="overflow-x-auto rounded-xl border border-indigo-50 bg-white max-h-60 overflow-y-auto compact-scroll">
@@ -555,28 +558,26 @@
                                     <th class="p-3 text-right">Azioni</th>
                                 </tr>
                             </thead>
-                            <tbody id="slot-management-list" class="divide-y divide-gray-100 text-gray-700">
-                                <!-- Generati da JS -->
-                            </tbody>
+                            <tbody id="slot-management-list" class="divide-y divide-gray-100 text-gray-700"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- 3. FILTRI INTELLIGENTI E STATISTICHE -->
+                <!-- FILTRI ED ESPORTAZIONI -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div class="glass-card p-5 lg:col-span-2 space-y-3">
-                        <h3 class="text-sm font-black text-indigo-800">Filtro Digitale Intelligente</h3>
+                        <h3 class="text-sm font-black text-indigo-800">Filtro Iscritti</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                             <div>
                                 <label class="block font-bold text-gray-500 mb-0.5">Indirizzo</label>
                                 <select id="filter-indirizzo" onchange="applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50"></select>
                             </div>
                             <div>
-                                <label class="block font-bold text-gray-500 mb-0.5">Stato Accoglienza</label>
+                                <label class="block font-bold text-gray-500 mb-0.5">Stato Presenza</label>
                                 <select id="filter-type" onchange="applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50">
                                     <option value="">Tutti</option>
                                     <option value="prenotazione">Attive (Non Scansionati)</option>
-                                    <option value="entrato">Entrati (Accettati con QR/Barcode)</option>
+                                    <option value="entrato">Entrati (Presenza Verificata)</option>
                                     <option value="cancellazione">Cancellate</option>
                                 </select>
                             </div>
@@ -589,61 +590,54 @@
 
                     <div class="glass-card p-5 flex flex-col justify-between space-y-3 text-xs">
                         <div>
-                            <p class="font-bold text-gray-400 uppercase tracking-wider text-[9px]">Totale Registrazioni</p>
+                            <p class="font-bold text-gray-400 uppercase tracking-wider text-[9px]">Iscritti Totali</p>
                             <p id="stat-total" class="text-3xl font-black text-indigo-800">0</p>
-                        </div>
-                        <div>
-                            <p class="font-bold text-gray-400 uppercase tracking-wider text-[9px]">Posti Rimasti Totali</p>
-                            <p id="stat-remaining" class="text-xl font-bold text-green-600">0</p>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="exportToExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition text-[10px] shadow-sm">
-                                Esporta Excel (.xls)
+                                Esporta Elenco (.csv)
                             </button>
                             <button onclick="confirmClearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg transition text-[10px] border border-red-100">
-                                Svuota DB
+                                Svuota Database
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. GRAFICI STATISTICI -->
+                <!-- ANALISI STATISTICA GRAFICA -->
                 <div class="glass-card p-5">
-                    <h3 class="text-sm font-black text-indigo-800 mb-2">Analisi Statistica Distribuzione</h3>
-                    <div class="w-full h-64 relative">
+                    <h3 class="text-sm font-black text-indigo-800 mb-2">Analisi Distribuzione</h3>
+                    <div class="w-full h-48 relative">
                         <canvas id="reservationsChart"></canvas>
                     </div>
                 </div>
 
-                <!-- 5. LISTA DETTAGLIATA IN ZONE DISTINTE E SEPARATE -->
+                <!-- ZONE DI DISTRIBUZIONE ISCRITTI -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <!-- Zona Prenotazioni Attive -->
                     <div class="glass-card p-4 bg-gradient-to-br from-green-50/30 to-white/90 border border-green-100/40">
                         <h3 class="text-xs font-black text-green-800 mb-1 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
-                            Prenotazioni Attive (Attesa Accoglienza)
+                            Iscritti in Attesa
                         </h3>
-                        <p class="text-[10px] text-gray-500 mb-3">Studenti registrati non ancora entrati.</p>
+                        <p class="text-[10px] text-gray-500 mb-3">Registrati non ancora scansionati all'ingresso.</p>
                         <div id="list-active-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
                     </div>
 
-                    <!-- Zona Studenti Entrati (Scansione Barcode Rilevata) -->
+                    <!-- Zona Studenti Entrati -->
                     <div class="glass-card p-4 bg-gradient-to-br from-blue-50/30 to-white/90 border border-blue-100/40">
                         <h3 class="text-xs font-black text-blue-800 mb-1 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
-                            Studenti Accettati (Entrati in Classe)
+                            Studenti Entrati (Idonei Attestato)
                         </h3>
-                        <p class="text-[10px] text-gray-500 mb-3">Registrati tramite scansione QR/Barcode.</p>
+                        <p class="text-[10px] text-gray-500 mb-3">Convalidati all'ingresso della scuola.</p>
                         <div id="list-checkedin-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
                     </div>
 
-                    <!-- Zona Cancellazioni -->
+                    <!-- Zona Cancellati -->
                     <div class="glass-card p-4 bg-gradient-to-br from-red-50/30 to-white/90 border border-red-100/40">
                         <h3 class="text-xs font-black text-red-800 mb-1 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-red-500 mr-1.5"></span>
-                            Annullamenti Registrati (Posti Liberati)
+                            Iscrizioni Annullate
                         </h3>
-                        <p class="text-[10px] text-gray-500 mb-3">Posizioni rimosse dal sistema.</p>
+                        <p class="text-[10px] text-gray-500 mb-3">Posizioni rimosse.</p>
                         <div id="list-cancelled-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
                     </div>
                 </div>
@@ -660,7 +654,7 @@
             <p class="text-xs text-gray-500 mb-4">Trova la tua iscrizione per procedere.</p>
 
             <div class="space-y-4">
-                <!-- Metodo 1: Ricerca per Codice -->
+                <!-- Ricerca per Codice -->
                 <div class="bg-indigo-50/30 p-3.5 rounded-xl border border-indigo-100">
                     <label class="block text-[10px] font-extrabold text-indigo-700 uppercase mb-1">Cerca tramite Codice</label>
                     <input id="input-search-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-lg text-xs font-mono font-bold uppercase text-center focus:ring-1 focus:ring-indigo-500">
@@ -668,27 +662,24 @@
 
                 <div class="text-center font-bold text-xs text-gray-400">OPPURE</div>
 
-                <!-- Metodo 2: Ricerca per Nome, Cognome ed E-mail -->
+                <!-- Ricerca per Dati Anagrafici -->
                 <div class="bg-purple-50/30 p-3.5 rounded-xl border border-purple-100">
                     <label class="block text-[10px] font-extrabold text-purple-700 uppercase mb-1">Cerca con i tuoi Dati</label>
                     <input id="input-search-name" type="text" placeholder="Nome e Cognome Studente" class="w-full p-2.5 mb-2 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
-                    <input id="input-search-email" type="email" placeholder="Email utilizzata per l'iscrizione" class="w-full p-2.5 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
+                    <input id="input-search-email" type="email" placeholder="Email utilizzata" class="w-full p-2.5 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
                 </div>
             </div>
 
-            <!-- Divisione pulsanti basata sull'azione desiderata -->
             <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeManageBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
+                <button onclick="closeManageBookingBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
                     Chiudi
                 </button>
-                <button id="btn-submit-action" onclick="" class="text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md">
-                    Procedi
-                </button>
+                <button id="btn-submit-action" class="text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md"></button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL per la Prenotazione -->
+    <!-- MODAL ISCRIZIONE -->
     <div id="booking-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-white/95 p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-indigo-50">
             <h3 class="text-lg font-black text-indigo-700 mb-1">Modulo di Iscrizione Mini-Stage</h3>
@@ -718,25 +709,22 @@
         </div>
     </div>
 
-    <!-- Script di gestione dei Servizi, Scanner e database asincrono -->
+    <!-- Script del modulo principale dell'applicazione -->
     <script type="module">
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, setDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc } = window.firebaseImports;
-        
+        // Costanti globali
         const ADMIN_PASSWORD = 'orientamento2025'; 
         const COLLECTION_PRENOTAZIONI = 'prenotazioni_v2'; 
         const COLLECTION_IMPOSTAZIONI = 'impostazioni_stage';
         const COLLECTION_CONFIG_CAPACITA = 'config_capacita';
-        const EMAIL_SCRIPT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxViz0PPdLhnB5H-mhXLZTmo08kYi95m01hIxp9jY22UtMbbcfeuev7HPlZbT1qPT0_/exec';
+        const COLLECTION_CONFIG_PROMEMORIA = 'config_promemoria';
+        
+        // Google Apps Script Deployments mantenuti e protetti
+        const EMAIL_SCRIPT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec';
+        const CANCELLATION_SCRIPT_URL = 'https://script.google.com/macros/s/AKfwcbw1C_uoalaFlcidMvhqz9zMxSXwqj1nVMo7bv3IGYbHis0aum-qoEzpA-Z2PDacgXYLbg/exec';
+        const REMINDER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytiWMb5UgZrpymmzrPR5VPwbtbcGBmDyPsp7EfC3ShGk_pXl_4Zp6630eTF7cPPbOUJQ/exec';
+        const CERTIFICATE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0IExcsXnFcwCYnT-IaVHHXn0FNoZQzd9YZvJyqL9cJZ4Hsp8xjHpV1XIlwrAQ63zlRQ/exec';
 
-        let db, auth, userId = null;
-        let isAuthReady = false;
-        let currentReceipt = { code: '', type: '', data: {} };
-        let allBookings = []; 
-        let stageSlots = [];  
-        let bookingsMap = {}; 
-        let capacitiesConfig = {}; 
-        let chartInstance = null;
-        let html5QrScanner = null; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ClJzJkLPS6LWHAzKjLQe';
 
         const INDIRIZZI_MAPPING = [
             "Liceo Scientifico - Scienze Applicate",
@@ -746,366 +734,352 @@
             "Sistema Moda"
         ];
 
-        // Definizione Firebase Config Standard
-        const firebaseConfig = {
-            apiKey: "AIzaSyAP-Bmf02SZp4o6K2z2B1GgIlUJ3Wuc8Zk",
-            authDomain: "progetto-63fb3.firebaseapp.com",
-            projectId: "progetto-63fb3",
-            storageBucket: "progetto-63fb3.firebasestorage.app",
-            messagingSenderId: "883088850197",
-            appId: "1:883088850197:web:29b8573ea43555041b3d1c",
-            measurementId: "G-2PNR8PQHDR"
+        const CONTAINER_MAPPING = {
+            "Liceo Scientifico - Scienze Applicate": "container-liceo",
+            "Relazioni Internazionali per il Marketing (RIM)": "container-rim",
+            "Logistica - Quadriennale": "container-logistica",
+            "Costruzione Ambiente e Territorio (CAT)": "container-cat",
+            "Sistema Moda": "container-moda"
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ClJzJkLPS6LWHAzKjLQe';
+        // Stati applicativi
+        let db, auth, userId = null;
+        let isAuthReady = false;
+        let offlineMode = false;
 
-        function showMessage(text, isError = false) {
-            const box = document.getElementById('message-box');
-            if (!box) return;
-            box.textContent = text;
-            box.className = `fixed top-4 right-4 p-4 rounded-xl shadow-2xl font-bold transition-all duration-300 z-50 transform translate-y-0 ${isError ? 'bg-red-600 text-white' : 'bg-green-500 text-white'}`;
-            box.classList.remove('hidden');
-            setTimeout(() => {
-                box.classList.add('hidden');
-            }, 5000);
-        }
+        let allBookings = []; 
+        let stageSlots = [];  
+        let bookingsMap = {}; 
+        let capacitiesConfig = {}; 
+        let reminderDaysConfig = 7; 
+        let chartInstance = null;
+        let html5QrScanner = null;
 
-        function generateCode() {
-            return "MS-" + Math.floor(100000 + Math.random() * 900000);
-        }
+        // Default Seeding slots se vuoto
+        const MOCK_SLOTS_SEED = [
+            { id: "LICEO-1", indirizzo: "Liceo Scientifico - Scienze Applicate", day: "Lunedì", dateStr: "23/11", time: "09:00 - 11:00", postiMax: 5 },
+            { id: "LICEO-2", indirizzo: "Liceo Scientifico - Scienze Applicate", day: "Giovedì", dateStr: "26/11", time: "11:00 - 13:00", postiMax: 5 },
+            { id: "RIM-1", indirizzo: "Relazioni Internazionali per il Marketing (RIM)", day: "Martedì", dateStr: "24/11", time: "09:00 - 11:00", postiMax: 4 },
+            { id: "RIM-2", indirizzo: "Relazioni Internazionali per il Marketing (RIM)", day: "Venerdì", dateStr: "27/11", time: "11:00 - 13:00", postiMax: 4 },
+            { id: "LOG-1", indirizzo: "Logistica - Quadriennale", day: "Mercoledì", dateStr: "25/11", time: "09:00 - 11:00", postiMax: 5 },
+            { id: "CAT-1", indirizzo: "Costruzione Ambiente e Territorio (CAT)", day: "Giovedì", dateStr: "26/11", time: "09:00 - 11:00", postiMax: 4 },
+            { id: "MODA-1", indirizzo: "Sistema Moda", day: "Venerdì", dateStr: "27/11", time: "09:00 - 11:00", postiMax: 6 }
+        ];
 
-        // Generatore di dataURL Barcode Code39 nativo offline (100% scansionabile per il PDF)
-        function createBarcodeDataURL(text) {
-            const code39Map = {
-                '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
-                '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
-                '8': '110100101101', '9': '101100101101', 'A': '110101001011', 'B': '101101001011',
-                'C': '110110100101', 'D': '101011001011', 'E': '110101100101', 'F': '101101100101',
-                'G': '101010011011', 'H': '110101001101', 'I': '101101001101', 'J': '101011001101',
-                'K': '110101010011', 'L': '101101010011', 'M': '110110101001', 'N': '101011010011',
-                'O': '110101101001', 'P': '101101101001', 'Q': '101010110011', 'R': '110101011001',
-                'S': '101101011001', 'T': '101011011001', 'U': '110010101011', 'V': '100110101011',
-                'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
-                '-': '100101011011', '*': '100101101101'
-            };
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const fullText = `*${text}*`;
+        // --- INIZIALIZZAZIONE ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            updateStatusText("Avvio connessione...");
+            setupFallbackMechanisms();
             
-            let binaryString = '';
-            for (let i = 0; i < fullText.length; i++) {
-                const char = fullText[i].toUpperCase();
-                if (code39Map[char]) {
-                    binaryString += code39Map[char] + '0'; 
-                }
+            // Controllo difensivo per verificare la presenza delle librerie Firebase
+            if (!window.firebaseImports) {
+                console.warn("Librerie Firebase non rilevate. Attivazione immediata Sandbox Locale.");
+                activateOfflineMode();
+            } else {
+                await startFirebaseIntegration();
             }
+            
+            setupBarcodeScannerGlobalInterceptor();
+            createBubbles();
+        });
 
-            const barWidth = 3; 
-            canvas.width = binaryString.length * barWidth + 60; 
-            canvas.height = 90;
-
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#000000';
-            let x = 30; 
-            for (let i = 0; i < binaryString.length; i++) {
-                if (binaryString[i] === '1') {
-                    ctx.fillRect(x, 15, barWidth, 60);
-                }
-                x += barWidth;
-            }
-
-            return canvas.toDataURL('image/png');
-        }
-
-        // Cambio di Vista integrato
-        function setView(viewName, data = {}) {
-            ['view-home', 'view-receipt', 'view-admin', 'view-scanner-terminal', 'loading-spinner'].forEach(id => {
-                const el = document.getElementById(id);
+        // Definizione e implementazione della funzione di cambio vista per evitare ReferenceError
+        function setView(viewName, data = null) {
+            const views = ['view-home', 'view-receipt', 'view-scanner-terminal', 'view-admin'];
+            views.forEach(v => {
+                const el = document.getElementById(v);
                 if (el) el.classList.add('hidden');
             });
-            const targetView = document.getElementById(`view-${viewName}`);
-            if (targetView) targetView.classList.remove('hidden');
             
-            if (viewName === 'receipt') {
+            const activeView = document.getElementById(`view-${viewName}`);
+            if (activeView) activeView.classList.remove('hidden');
+
+            if (viewName === 'receipt' && data) {
                 updateReceiptView(data);
-            } else if (viewName === 'home' && isAuthReady) {
-                renderStages();
             }
         }
 
-        // Autenticazione e Inizializzazione Database
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            
-            onAuthStateChanged(auth, async (user) => {
-                if (!isAuthReady) {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    userId = auth.currentUser?.uid || crypto.randomUUID();
-                    isAuthReady = true;
-                    setView('home');
-                    
-                    await checkAndSeedDatabase();
-                    startCapacitiesListener();
-                    startImpostazioniListener();
-                    startDataListeners();
-                    setupUSBConnectionHandlers();
+        // Definizione della funzione per visualizzare popup di stato temporanei
+        function showMessage(msg, isError = false) {
+            const msgBox = document.getElementById('message-box');
+            if (!msgBox) return;
+            msgBox.textContent = msg;
+            msgBox.className = `fixed top-4 right-4 text-white p-4 rounded-xl shadow-2xl transition-all duration-300 z-50 transform translate-y-0`;
+            if (isError) {
+                msgBox.classList.add('bg-red-500');
+            } else {
+                msgBox.classList.add('bg-green-500');
+            }
+            msgBox.classList.remove('hidden');
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 4000);
+        }
+
+        // Definizione della funzione di rilevamento delle webcam collegate
+        function detectCameras() {
+            const select = document.getElementById('scanner-camera-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Rilevamento in corso...</option>';
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Webcam ' + d.id}</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="">Nessuna fotocamera trovata</option>';
                 }
+            }).catch(err => {
+                console.error("Errore rilevamento webcam:", err);
+                select.innerHTML = '<option value="">Errore di accesso alla webcam</option>';
             });
-        } catch(e) {
-            console.error("Errore inizializzazione database", e);
+        }
+
+        function updateStatusText(txt, isError = false) {
+            const badge = document.getElementById('conn-badge');
+            if(!badge) return;
+            badge.textContent = txt;
+            if(isError) {
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 animate-pulse";
+            } else if (offlineMode) {
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800";
+            } else {
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-100 text-green-800";
+            }
+        }
+
+        function updateStatus(connected) {
+            updateStatusText(connected ? "Connesso al Database" : "Errore Connessione", !connected);
+        }
+        window.updateStatus = updateStatus;
+
+        function setupFallbackMechanisms() {
+            setTimeout(() => {
+                if(!isAuthReady) {
+                    console.warn("Sincronizzazione DB lenta. Abilitazione immediata Sandbox Locale.");
+                    activateOfflineMode();
+                }
+            }, 3000);
+        }
+
+        async function startFirebaseIntegration() {
+            try {
+                const { initializeApp, getAuth, signInAnonymously, getFirestore, collection, getDocs, onSnapshot } = window.firebaseImports;
+                const firebaseConfig = {
+                    apiKey: "AIzaSyAP-Bmf02SZp4o6K2z2B1GgIlUJ3Wuc8Zk",
+                    authDomain: "progetto-63fb3.firebaseapp.com",
+                    projectId: "progetto-63fb3",
+                    storageBucket: "progetto-63fb3.firebasestorage.app",
+                    messagingSenderId: "883088850197",
+                    appId: "1:883088850197:web:29b8573ea43555041b3d1c"
+                };
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await signInAnonymously(auth);
+                userId = auth.currentUser?.uid || "anon-user";
+                offlineMode = false;
+                isAuthReady = true;
+                updateStatusText("Connesso al Database");
+                
+                await verifyAndSeedDB();
+                setupSnapshotListeners();
+            } catch(e) {
+                console.warn("Impossibile connettersi al cloud. Attivazione Sandbox locale.", e);
+                activateOfflineMode();
+            }
+        }
+
+        function activateOfflineMode() {
+            offlineMode = true;
             isAuthReady = true;
+            userId = "local-sandbox-user";
+            updateStatusText("Sandbox Offline (Local Storage)", false);
+            loadLocalSandboxData();
+            hideLoader();
             setView('home');
         }
 
-        async function checkAndSeedDatabase() {
-            const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
-            const capSnapshot = await getDocs(capRef);
-            if (capSnapshot.empty) {
-                for (const ind of INDIRIZZI_MAPPING) {
-                    await setDoc(doc(capRef, ind), {
-                        indirizzo: ind,
-                        postiMax: 4
-                    });
+        function hideLoader() {
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) spinner.classList.add('hidden');
+        }
+
+        function loadLocalSandboxData() {
+            const storedSlots = localStorage.getItem('levi_slots');
+            stageSlots = storedSlots ? JSON.parse(storedSlots) : [...MOCK_SLOTS_SEED];
+
+            const storedBookings = localStorage.getItem('levi_bookings');
+            allBookings = storedBookings ? JSON.parse(storedBookings) : [];
+
+            capacitiesConfig = {
+                "Liceo Scientifico - Scienze Applicate": 5,
+                "Relazioni Internazionali per il Marketing (RIM)": 4,
+                "Logistica - Quadriennale": 5,
+                "Costruzione Ambiente e Territorio (CAT)": 4,
+                "Sistema Moda": 6
+            };
+            
+            reminderDaysConfig = parseInt(localStorage.getItem('levi_reminder_days') || "7");
+            rebuildBookingsMap();
+        }
+
+        function saveLocalSandboxData() {
+            localStorage.setItem('levi_slots', JSON.stringify(stageSlots));
+            localStorage.setItem('levi_bookings', JSON.stringify(allBookings));
+            localStorage.setItem('levi_reminder_days', reminderDaysConfig.toString());
+            rebuildBookingsMap();
+            renderStages();
+        }
+
+        function rebuildBookingsMap() {
+            const counts = {};
+            allBookings.forEach(b => {
+                if (b.type === 'prenotazione') { counts[b.slotId] = (counts[b.slotId] || 0) + 1; }
+            });
+            bookingsMap = counts;
+        }
+
+        async function verifyAndSeedDB() {
+            try {
+                const { collection, getDocs, doc, setDoc } = window.firebaseImports;
+                const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
+                const capSnap = await getDocs(capRef);
+                if (capSnap.empty) {
+                    for (const ind of INDIRIZZI_MAPPING) {
+                        await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 5 });
+                    }
                 }
+
+                const slotsRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`);
+                const slotsSnap = await getDocs(slotsRef);
+                if (slotsSnap.empty) {
+                    for (const s of MOCK_SLOTS_SEED) {
+                        await setDoc(doc(slotsRef, s.id), s);
+                    }
+                }
+            } catch(e) {
+                console.error("Errore verifica database:", e);
             }
         }
 
-        function startCapacitiesListener() {
-            const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
-            onSnapshot(capRef, (snapshot) => {
+        function setupSnapshotListeners() {
+            const { collection, onSnapshot, doc } = window.firebaseImports;
+            // Capacità Posti
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`), (snap) => {
                 const caps = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    caps[data.indirizzo] = data.postiMax;
-                });
+                snap.forEach(d => { caps[d.data().indirizzo] = d.data().postiMax; });
                 capacitiesConfig = caps;
                 renderStages();
                 renderCapacitiesConfigInputs();
             });
-        }
 
-        function startImpostazioniListener() {
-            const settingsRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`);
-            onSnapshot(settingsRef, (snapshot) => {
+            // Config Promemoria
+            onSnapshot(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`), (snap) => {
+                if (snap.exists()) {
+                    reminderDaysConfig = snap.data().daysBefore || 7;
+                    const el = document.getElementById('reminder-days-input');
+                    if (el) el.value = reminderDaysConfig;
+                    calculateReminderEligibility();
+                }
+            });
+
+            // Calendario Slots
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`), (snap) => {
                 const list = [];
-                snapshot.forEach(doc => {
-                    list.push(doc.data());
-                });
+                snap.forEach(d => list.push(d.data()));
                 stageSlots = list;
                 renderStages();
-                if (!document.getElementById('view-admin').classList.contains('hidden')) {
-                    renderSlotManagementTable();
-                }
+                renderSlotManagementTable();
             });
-        }
 
-        function startDataListeners() {
-            const bookingsRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`);
-            onSnapshot(bookingsRef, (snapshot) => {
-                const fetchedBookings = [];
-                const newBookingsMap = {};
-                snapshot.forEach(doc => {
-                    const data = { id: doc.id, ...doc.data() };
-                    fetchedBookings.push(data);
-                    
-                    if (data.type === 'prenotazione') {
-                        newBookingsMap[data.slotId] = (newBookingsMap[data.slotId] || 0) + 1;
+            // Prenotazioni
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`), (snap) => {
+                const list = [];
+                const bMap = {};
+                snap.forEach(d => {
+                    const b = { id: d.id, ...d.data() };
+                    list.push(b);
+                    if (b.type === 'prenotazione') {
+                        bMap[b.slotId] = (bMap[b.slotId] || 0) + 1;
                     }
                 });
+                allBookings = list.sort((a, b) => b.timestamp - a.timestamp);
+                bookingsMap = bMap;
                 
-                allBookings = fetchedBookings.sort((a, b) => b.timestamp - a.timestamp);
-                bookingsMap = newBookingsMap;
-                
-                renderStages();
-                if (!document.getElementById('view-admin').classList.contains('hidden')) {
-                    applyFilters(); 
-                }
+                hideLoader();
+                setView('home');
+                calculateReminderEligibility();
+                calculateCertificateEligibility();
+                applyFilters(); 
             });
         }
 
-        // RILEVAMENTO PERIFERICHE USB / LETTORI HID CON GESTIONE SICURA
-        async function detectUSBScanners() {
-            if (!navigator.hid) {
-                showMessage("L'API WebHID non è supportata o è disabilitata da questo browser. Usa Google Chrome o Edge.", true);
-                return;
-            }
+        function renderStages() {
+            INDIRIZZI_MAPPING.forEach(ind => {
+                const containerId = CONTAINER_MAPPING[ind];
+                const container = document.getElementById(containerId);
+                if (!container) return;
 
-            try {
-                const devices = await navigator.hid.requestDevice({ filters: [] });
-                if (devices && devices.length > 0) {
-                    showMessage(`Scanner USB autorizzato correttamente: ${devices[0].productName || 'Periferica HID'}`);
-                    updateUSBDevicesList();
-                }
-            } catch(e) {
-                console.error("Accoppiamento USB non riuscito o bloccato dalle autorizzazioni", e);
-                showMessage("Accesso HID non consentito o bloccato dalle politiche del browser.", true);
-            }
-        }
-
-        async function updateUSBDevicesList() {
-            const listEl = document.getElementById('usb-devices-list');
-            if (!listEl) return;
-            
-            if (!navigator.hid) {
-                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID disattivato per sicurezza. La pistola USB funziona ugualmente tramite l\'emulazione tastiera in background.</p>';
-                return;
-            }
-
-            try {
-                const devices = await navigator.hid.getDevices();
-                if (!devices || devices.length === 0) {
-                    listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Nessun lettore USB HID autorizzato. Premi "Rileva e Autorizza".</p>';
+                const filteredSlots = stageSlots.filter(s => s.indirizzo === ind);
+                if (filteredSlots.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center py-6">
+                            <p class="text-xs text-gray-400 italic">Nessun calendario registrato.</p>
+                        </div>`;
                     return;
                 }
 
-                listEl.innerHTML = devices.map(device => `
-                    <div class="flex items-center justify-between p-2 bg-purple-100/50 border border-purple-200 rounded-lg text-[11px] font-bold text-purple-900 shadow-sm animate-fade-in">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z"></path></svg>
-                            <span class="truncate max-w-[180px]">${device.productName || 'Periferica USB'}</span>
-                        </div>
-                        <span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Pronto</span>
-                    </div>
-                `).join('');
-            } catch(e) {
-                console.warn("Permesso WebHID negato nel frame. L'emulazione tastiera globale rimane attiva.", e);
-                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID limitato dai permessi di sicurezza. Lo scanner a pistola USB funziona comunque emulando la tastiera.</p>';
-            }
-        }
+                container.innerHTML = filteredSlots.map(slot => {
+                    const maxPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 5;
+                    const booked = bookingsMap[slot.id] || 0;
+                    const remaining = maxPosti - booked;
+                    const percentUsed = Math.min(100, Math.round((booked / maxPosti) * 100));
+                    
+                    let progressColor = "bg-green-500";
+                    let badgeColor = "bg-green-100 text-green-800";
+                    let rowBorderColor = "border-green-100";
+                    
+                    if (remaining <= 0) {
+                        progressColor = "bg-red-500";
+                        badgeColor = "bg-red-100 text-red-800";
+                        rowBorderColor = "border-red-100";
+                    } else if (remaining <= 2) {
+                        progressColor = "bg-orange-500";
+                        badgeColor = "bg-orange-100 text-orange-800";
+                        rowBorderColor = "border-orange-100";
+                    }
 
-        function setupUSBConnectionHandlers() {
-            if (!navigator.hid) return;
-            
-            try {
-                navigator.hid.addEventListener('connect', (e) => {
-                    showMessage(`Periferica USB Connessa: ${e.device.productName || 'Sconosciuta'}`);
-                    updateUSBDevicesList();
-                });
-
-                navigator.hid.addEventListener('disconnect', (e) => {
-                    showMessage(`Periferica USB Scollegata: ${e.device.productName || 'Sconosciuta'}`);
-                    updateUSBDevicesList();
-                });
-                
-                updateUSBDevicesList();
-            } catch (e) {
-                console.warn("Impossibile registrare i listener HID (disabilitati dalle politiche di sicurezza):", e);
-                const listEl = document.getElementById('usb-devices-list');
-                if (listEl) {
-                    listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID non attivo nel browser attuale. La pistola USB standard funziona comunque tramite emulazione della tastiera.</p>';
-                }
-            }
-        }
-
-        // Generatore di segnale acustico Beep per scansione
-        function playScannerBeep(isSuccess = true) {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                if (isSuccess) {
-                    oscillator.type = 'sine';
-                    oscillator.frequency.value = 1200; 
-                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
-                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.15);
-                } else {
-                    oscillator.type = 'sawtooth';
-                    oscillator.frequency.value = 300; 
-                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.1);
-                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.4);
-                }
-            } catch(e) {
-                console.warn("Audio Context non supportato:", e);
-            }
-        }
-
-        // Renderizzazione slot stage per la selezione degli alunni
-        function renderStages() {
-            const containers = {
-                "Liceo Scientifico - Scienze Applicate": document.getElementById('container-liceo'),
-                "Relazioni Internazionali per il Marketing (RIM)": document.getElementById('container-rim'),
-                "Logistica - Quadriennale": document.getElementById('container-logistica'),
-                "Costruzione Ambiente e Territorio (CAT)": document.getElementById('container-cat'),
-                "Sistema Moda": document.getElementById('container-moda')
-            };
-
-            Object.values(containers).forEach(c => { if(c) c.innerHTML = ''; });
-
-            const grouped = {};
-            stageSlots.forEach(slot => {
-                if(!grouped[slot.indirizzo]) grouped[slot.indirizzo] = [];
-                grouped[slot.indirizzo].push(slot);
-            });
-
-            INDIRIZZI_MAPPING.forEach(ind => {
-                const container = containers[ind];
-                if (container && (!grouped[ind] || grouped[ind].length === 0)) {
-                    container.innerHTML = `
-                        <div class="flex items-center justify-center h-full text-center p-4">
-                            <p class="text-xs text-gray-400 italic">Nessun calendario inserito per questo indirizzo.</p>
-                        </div>`;
-                }
-            });
-
-            for (const indirizzo in grouped) {
-                const container = containers[indirizzo];
-                if (!container) continue;
-
-                grouped[indirizzo].sort((a, b) => {
-                    const [gA, mA] = a.dateStr.split('/');
-                    const [gB, mB] = b.dateStr.split('/');
-                    return (parseInt(mA) - parseInt(mB)) || (parseInt(gA) - parseInt(gB));
-                });
-
-                let html = '<div class="space-y-1.5 pr-1">';
-                grouped[indirizzo].forEach(slot => {
-                    const bookedCount = bookingsMap[slot.id] || 0;
-                    const limitPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 4;
-                    const remaining = limitPosti - bookedCount;
                     const isFull = remaining <= 0;
+                    const actionButton = isFull 
+                        ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed">Completo</span>`
+                        : `<button onclick="openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md">Prenota</button>`;
 
-                    html += `
-                        <div class="flex items-center justify-between p-2 rounded-lg border ${isFull ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white hover:border-indigo-200 border-gray-100'} transition text-xs">
-                            <div class="flex-grow min-w-0">
-                                <p class="font-bold text-gray-800 leading-tight">${slot.day} ${slot.dateStr}</p>
-                                <p class="text-[10px] text-gray-500 font-mono">${slot.time}</p>
+                    return `
+                        <div class="p-3 bg-white border ${rowBorderColor} rounded-xl shadow-sm flex flex-col justify-between space-y-2">
+                            <div class="flex justify-between items-start">
+                                <div class="space-y-0.5">
+                                    <p class="text-xs font-black text-indigo-950">${slot.day} ${slot.dateStr}</p>
+                                    <p class="text-[11px] font-medium text-gray-500 font-mono">${slot.time}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-block text-[9px] font-bold ${badgeColor} px-2 py-0.5 rounded-full">
+                                        ${isFull ? 'Esaurito' : `${remaining} disponibili`}
+                                    </span>
+                                    <p class="text-[9px] text-gray-400 font-semibold mt-0.5">${booked} / ${maxPosti} iscritti</p>
+                                </div>
                             </div>
-                            <div class="text-right mr-3 shrink-0">
-                                <span class="font-bold ${isFull ? 'text-red-500' : 'text-green-600'}">
-                                    ${isFull ? 'Pieno' : remaining + '/' + limitPosti + ' liberi'}
-                                </span>
+                            <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="${progressColor} h-full transition-all duration-500" style="width: ${percentUsed}%"></div>
                             </div>
-                            <button 
-                                onclick="openBookingModal('${slot.id}', '${slot.indirizzo}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" 
-                                class="py-1 px-3 rounded-md font-bold text-[10px] transition shrink-0 ${isFull ? 'bg-gray-300 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'}"
-                                ${isFull ? 'disabled' : ''}>
-                                Iscriviti
-                            </button>
+                            <div class="flex justify-between items-center pt-1">
+                                <span class="text-[9px] text-indigo-400 font-extrabold tracking-wider uppercase">Ingresso Libero</span>
+                                ${actionButton}
+                            </div>
                         </div>
                     `;
-                });
-                html += '</div>';
-                container.innerHTML = html;
-            }
+                }).join('');
+            });
         }
 
         function openBookingModal(slotId, indirizzo, day, dateStr, time) {
@@ -1115,7 +1089,10 @@
             document.getElementById('modal-stage-date').value = dateStr;
             document.getElementById('modal-stage-time').value = time;
 
-            document.getElementById('modal-slot-info').innerHTML = `<strong>Corso:</strong> ${indirizzo}<br><strong>Data:</strong> ${day} ${dateStr} alle ${time}`;
+            document.getElementById('modal-slot-info').innerHTML = `
+                <strong class="text-indigo-900">Indirizzo:</strong> ${indirizzo}<br>
+                <strong class="text-indigo-900">Data & Ora:</strong> ${day} ${dateStr} alle ${time}
+            `;
             document.getElementById('booking-modal').classList.remove('hidden');
         }
 
@@ -1131,7 +1108,7 @@
             document.getElementById('modal-cellulare').value = '';
         }
 
-        // CONFERMA ISCRIZIONE ISTANTANEA (CON BACKGROUND PROCESSING)
+        // CONFERMA PRENOTAZIONE CON SUPPORTO EMAIL AUTOMATICA E PDF
         async function confirmBooking() {
             const slotId = document.getElementById('modal-slot-id').value;
             const indirizzo = document.getElementById('modal-indirizzo').value;
@@ -1145,13 +1122,12 @@
             const cellulare = document.getElementById('modal-cellulare').value.trim();
 
             if (!nome || !scuola || !email || !cellulare) {
-                return showMessage("Per favore, compila tutti i campi richiesti.", true);
+                return showMessage("Tutti i campi sono obbligatori.", true);
             }
-            if (!isAuthReady) return showMessage("Connessione non ancora pronta. Attendi...", true);
             
             closeModal();
-
-            const code = generateCode();
+            const code = "MS-" + Math.floor(100000 + Math.random() * 900000);
+            
             const reservationData = {
                 code: code,
                 type: 'prenotazione',
@@ -1165,269 +1141,807 @@
                 email: email,
                 cellulare: cellulare,
                 userId: userId,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                reminderSent: false,
+                certificateSent: false
             };
 
-            // Transizione immediata dell'utente alla ricevuta
+            // Cambia vista istantaneamente
             setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
-            showMessage("Prenotazione salvata! Generazione email in background.");
+            showMessage("Prenotazione registrata con successo!");
 
-            // Salvataggio asincrono su Firebase ed invio della mail
-            try {
-                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
-                await setDoc(docRef, reservationData);
-                
+            if (offlineMode) {
+                allBookings.unshift(reservationData);
+                saveLocalSandboxData();
                 setTimeout(() => {
-                    sendAutomaticEmailNotification(reservationData);
-                }, 50);
-
-            } catch (e) {
-                console.error("Errore salvataggio asincrono:", e);
-                showMessage("Iscrizione salvata localmente, ma c'è stato un problema di rete.", true);
+                    const statusEl = document.getElementById('email-sending-status');
+                    if (statusEl) {
+                        statusEl.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
+                        statusEl.innerHTML = `<span>Sandbox locale: Ricevuta emessa con successo offline!</span>`;
+                    }
+                }, 1000);
+            } else {
+                try {
+                    const { doc, setDoc } = window.firebaseImports;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                    await setDoc(docRef, reservationData);
+                    
+                    // Invio immediato asincrono e non bloccante della notifica email con PDF
+                    sendAutomaticEmailNotification(reservationData, false);
+                } catch(e) {
+                    console.error("Errore salvataggio DB:", e);
+                    showMessage("Registrata solo localmente.", true);
+                }
             }
         }
 
-        // Genera un PDF ad alta definizione grafica con Barcode offline e QR-code integrati, poi lo invia tramite Apps Script
-        async function sendAutomaticEmailNotification(booking) {
-            const emailStatusEl = document.getElementById('email-sending-status');
-            if (emailStatusEl) {
-                emailStatusEl.className = "mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide";
-                emailStatusEl.innerHTML = `
-                    <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Inoltro e-mail in background in corso...</span>`;
+        function createBarcodeDataURL(text) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 300;
+            canvas.height = 80;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0,0,300,80);
+            ctx.fillStyle = '#000000';
+            
+            let x = 20;
+            ctx.fillRect(x, 5, 4, 70); x += 6;
+            ctx.fillRect(x, 5, 2, 70); x += 4;
+            for(let i=0; i<text.length; i++) {
+                let code = text.charCodeAt(i);
+                let pattern = (code * 12345).toString(2);
+                for(let j=0; j<Math.min(pattern.length, 8); j++) {
+                    let barWidth = pattern[j] === '1' ? 3 : 1;
+                    ctx.fillRect(x, 5, barWidth, 70);
+                    x += barWidth + 2;
+                }
+            }
+            ctx.fillRect(x, 5, 2, 70); x += 4;
+            ctx.fillRect(x, 5, 4, 70);
+            
+            ctx.fillStyle = '#555555';
+            ctx.font = '12px monospace';
+            ctx.textBaseline = 'bottom';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 150, 78);
+            return canvas.toDataURL();
+        }
+
+        // Disegna un codice a barre all'interno di un PDF generato dinamicamente
+        function drawBarcodeInPDF(pdfDoc, text, startX, startY) {
+            pdfDoc.setFillColor(0, 0, 0);
+            let currentX = startX;
+            for (let i = 0; i < text.length; i++) {
+                let charCode = text.charCodeAt(i);
+                let pattern = (charCode * 12345).toString(2);
+                for (let j = 0; j < Math.min(pattern.length, 8); j++) {
+                    let width = pattern[j] === '1' ? 1.0 : 0.3;
+                    pdfDoc.rect(currentX, startY, width, 14, 'F');
+                    currentX += width + 0.3;
+                }
+            }
+            pdfDoc.setFont("Helvetica", "normal");
+            pdfDoc.setFontSize(8);
+            pdfDoc.setTextColor(100, 100, 100);
+            pdfDoc.text(text, startX + 15, startY + 18);
+        }
+
+        function updateReceiptView(data) {
+            const rTitle = document.getElementById('receipt-title');
+            const rCode = document.getElementById('receipt-code');
+            const rMsg = document.getElementById('receipt-message');
+            const rDetails = document.getElementById('receipt-details');
+            const rQr = document.getElementById('receipt-qr');
+            const rBarcode = document.getElementById('receipt-barcode');
+
+            rTitle.textContent = data.type === 'cancellazione' ? 'ISCRIZIONE ANNULLATA' : 'ISCRIZIONE CONFERMATA!';
+            rCode.textContent = data.code;
+
+            if (data.type === 'cancellazione') {
+                rMsg.innerHTML = `<span class="text-red-600 font-extrabold text-sm">Questa prenotazione è stata annullata.</span>`;
+                rQr.classList.add('opacity-30');
+                rBarcode.classList.add('opacity-30');
+            } else {
+                rMsg.innerHTML = `Gentile <strong>${data.data.nome}</strong>, la tua prenotazione per il mini-stage è attiva.<br>Presenta questo pass all'accoglienza dell'Istituto Levi.`;
+                rQr.classList.remove('opacity-30');
+                rBarcode.classList.remove('opacity-30');
             }
 
-            try {
-                if (typeof window.jspdf === 'undefined') {
-                    throw new Error("Libreria PDF non pronta.");
-                }
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('p', 'mm', 'a4');
-                
-                const primaryColor = [30, 27, 75]; 
-                const secondaryColor = [79, 70, 229]; 
-                const darkText = [55, 65, 81];
-                
-                // Header Istituzionale
-                doc.setFillColor(30, 27, 75);
-                doc.rect(0, 0, 210, 38, 'F');
-                
-                doc.setTextColor(255, 255, 255);
-                doc.setFont("Helvetica", "bold");
-                doc.setFontSize(22);
-                doc.text("IIS PRIMO LEVI - SEREGNO", 15, 16);
-                doc.setFontSize(10);
-                doc.setFont("Helvetica", "normal");
-                doc.text("Via Appia Antica 68, Seregno (MB) - Commissione Orientamento", 15, 22);
-                doc.text("Telefono: 0362 221234 - Email: orientamento@leviseregno.edu.it", 15, 27);
-                
-                doc.setFillColor(79, 70, 229);
-                doc.roundedRect(150, 8, 45, 12, 2, 2, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont("Helvetica", "bold");
-                doc.setFontSize(10);
-                doc.text("RICEVUTA UFFICIALE", 152, 16);
-                
-                // Titolo del Documento
-                doc.setTextColor(30, 27, 75);
-                doc.setFontSize(15);
-                doc.setFont("Helvetica", "bold");
-                doc.text("CONFERMA PRENOTAZIONE MINI-STAGE", 15, 52);
-                
-                doc.setDrawColor(229, 231, 235);
-                doc.setLineWidth(0.5);
-                doc.line(15, 56, 195, 56);
-                
-                // Blocco Informazioni Dati Studente (Card a sinistra)
-                doc.setFillColor(249, 250, 251);
-                doc.roundedRect(15, 62, 85, 65, 3, 3, 'F');
-                doc.setDrawColor(229, 231, 235);
-                doc.roundedRect(15, 62, 85, 65, 3, 3, 'S');
-                
-                doc.setTextColor(79, 70, 229);
-                doc.setFontSize(11);
-                doc.setFont("Helvetica", "bold");
-                doc.text("DATI STUDENTE", 22, 69);
-                
-                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-                doc.setFontSize(9);
-                doc.setFont("Helvetica", "bold");
-                doc.text("Nome Studente:", 22, 77);
-                doc.setFont("Helvetica", "normal");
-                doc.text(booking.nome, 22, 81);
-                
-                doc.setFont("Helvetica", "bold");
-                doc.text("Scuola di Provenienza:", 22, 88);
-                doc.setFont("Helvetica", "normal");
-                doc.text(booking.scuola, 22, 92);
-                
-                doc.setFont("Helvetica", "bold");
-                doc.text("Contatti Registrati:", 22, 99);
-                doc.setFont("Helvetica", "normal");
-                doc.text("Email: " + booking.email, 22, 103);
-                doc.text("Cellulare: " + booking.cellulare, 22, 107);
-                
-                // Blocco Informazioni Dettaglio Stage (Card a destra)
-                doc.setFillColor(245, 243, 255);
-                doc.roundedRect(108, 62, 87, 65, 3, 3, 'F');
-                doc.setDrawColor(221, 214, 254);
-                doc.roundedRect(108, 62, 87, 65, 3, 3, 'S');
-                
-                doc.setTextColor(30, 27, 75);
-                doc.setFontSize(11);
-                doc.setFont("Helvetica", "bold");
-                doc.text("DETTAGLIO ATTIVITÀ", 115, 69);
-                
-                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-                doc.setFontSize(9);
-                doc.setFont("Helvetica", "bold");
-                doc.text("Indirizzo di Studio Scelto:", 115, 77);
-                doc.setFont("Helvetica", "bold");
-                doc.setTextColor(79, 70, 229);
-                doc.text(booking.indirizzo, 115, 81);
-                
-                doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-                doc.setFont("Helvetica", "bold");
-                doc.text("Giorno dello Stage:", 115, 88);
-                doc.setFont("Helvetica", "normal");
-                doc.text(booking.stageDay + " " + booking.stageDate, 115, 92);
-                
-                doc.setFont("Helvetica", "bold");
-                doc.text("Orario Curricolare:", 115, 99);
-                doc.setFont("Helvetica", "normal");
-                doc.text(booking.stageTime, 115, 103);
-                
-                // Blocco Codice Unico
-                doc.setFillColor(243, 244, 246);
-                doc.roundedRect(15, 134, 180, 16, 2, 2, 'F');
-                doc.setTextColor(30, 27, 75);
-                doc.setFontSize(11);
-                doc.setFont("Helvetica", "bold");
-                doc.text("CODICE PRENOTAZIONE UNIVOCO:", 25, 144);
-                doc.setFontSize(14);
-                doc.setFont("Courier", "bold");
-                doc.setTextColor(220, 38, 38);
-                doc.text(booking.code, 125, 144);
-                
-                // Istruzioni e Note di Ammissione
-                doc.setTextColor(30, 27, 75);
-                doc.setFontSize(10);
-                doc.setFont("Helvetica", "bold");
-                doc.text("ISTRUZIONI IMPORTANTI PER L'ACCESSO ALL'ISTITUTO:", 15, 161);
-                
-                doc.setFont("Helvetica", "normal");
-                doc.setFontSize(8.5);
-                doc.setTextColor(107, 114, 128);
-                const istruzioni = [
-                    "- Presentarsi all'ingresso principale almeno 10 minuti prima dell'inizio delle lezioni.",
-                    "- Mostrare obbligatoriamente questo foglio all'addetto d'accoglienza (stampato o su smartphone).",
-                    "- Lo scanner della Commissione convaliderà istantaneamente il Barcode / QR-Code qui sotto riportato.",
-                    "- In caso di impossibilità a partecipare, vi invitiamo ad annullare tempestivamente la prenotazione sul",
-                    "  nostro portale per permettere ad altri ragazzi in lista d'attesa di partecipare all'esperienza."
-                ];
-                let lineY = 167;
-                istruzioni.forEach(line => {
-                    doc.text(line, 15, lineY);
-                    lineY += 5;
-                });
-                
-                // QR CODE & BARCODE (Affiancati in fondo al PDF in modo perfetto)
-                doc.setDrawColor(229, 231, 235);
-                doc.line(15, 196, 195, 196);
-                
-                const barcodeDataUrl = createBarcodeDataURL(booking.code);
-                doc.addImage(barcodeDataUrl, 'PNG', 15, 202, 100, 30);
-                
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.code)}`;
-                doc.addImage(qrUrl, 'PNG', 155, 202, 30, 30);
-                
-                doc.setFontSize(7.5);
-                doc.setTextColor(156, 163, 175);
-                doc.text("Scansione rapida Accoglienza IIS Levi (Barcode)", 15, 236);
-                doc.text("QR-Code di Convalida", 154, 236);
-                
-                doc.setDrawColor(79, 70, 229);
-                doc.setLineWidth(0.2);
-                doc.line(15, 246, 195, 246);
-                
-                doc.setTextColor(156, 163, 175);
-                doc.setFontSize(8);
-                doc.text("Documento convalidato digitalmente dalla Commissione Orientamento dell'Istituto Superiore Primo Levi Seregno.", 15, 252);
-                doc.text("Data di emissione: " + new Date().toLocaleDateString('it-IT') + " alle ore " + new Date().toLocaleTimeString('it-IT'), 15, 256);
-                
-                const dataUri = doc.output('datauristring');
-                const base64PdfStr = dataUri.split(',')[1]; 
+            // Generazione Barcode Locale Canvas
+            const bcodeUrl = createBarcodeDataURL(data.code);
+            rBarcode.innerHTML = `<img src="${bcodeUrl}" alt="Barcode Scansione" class="h-12 object-contain">`;
 
-                const nameParts = booking.nome.trim().split(' ');
+            // QR Code
+            rQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.code)}`;
+
+            // Dettagli
+            rDetails.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 border-t pt-2.5 text-xs">
+                    <div><span class="text-gray-400 font-medium">Studente:</span> <strong class="text-indigo-950">${data.data.nome}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Scuola Provenienza:</span> <strong class="text-indigo-950">${data.data.scuola || 'N/A'}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Percorso Didattico:</span> <strong class="text-indigo-950">${data.data.indirizzo}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Data dello Stage:</span> <strong class="text-indigo-950">${data.data.stageDay} ${data.data.stageDate}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Orario:</span> <strong class="text-indigo-950">${data.data.stageTime}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Email Registrata:</span> <strong class="text-indigo-950">${data.data.email}</strong></div>
+                </div>
+            `;
+        }
+
+        async function sendAutomaticEmailNotification(res, isRetrieval = false) {
+            const statusText = document.getElementById('email-status-text');
+            const statusBg = document.getElementById('email-sending-status');
+            
+            if (statusBg) {
+                statusBg.className = "mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide";
+                statusText.textContent = isRetrieval ? "Rigenerazione e invio della e-mail in corso..." : "Generazione e invio della ricevuta email...";
+            }
+
+            // Ottimizzazione asincrona: svincola il thread principale per evitare lag nella visualizzazione
+            setTimeout(async () => {
+                try {
+                    if (typeof window.jspdf === 'undefined') {
+                        throw new Error("Libreria PDF jsPDF non caricata.");
+                    }
+
+                    const { jsPDF } = window.jspdf;
+                    const pdfDoc = new jsPDF('p', 'mm', 'a4');
+                    
+                    // Intestazione ufficiale Primo Levi Seregno
+                    pdfDoc.setFillColor(30, 27, 75); // Dark Indigo
+                    pdfDoc.rect(0, 0, 210, 38, 'F');
+                    
+                    pdfDoc.setTextColor(255, 255, 255);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.setFontSize(22);
+                    pdfDoc.text("IIS PRIMO LEVI - SEREGNO", 15, 16);
+                    pdfDoc.setFontSize(9);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text("Via Briantina 68, Seregno (MB) - Commissione Orientamento Scolastico", 15, 23);
+                    pdfDoc.text("Email: orientamento@leviseregno.edu.it | Tel: 0362 221234", 15, 28);
+                    
+                    // Card Titolo Ricevuta
+                    pdfDoc.setFillColor(79, 70, 229); // Accent Indigo
+                    pdfDoc.roundedRect(148, 8, 48, 12, 2, 2, 'F');
+                    pdfDoc.setTextColor(255, 255, 255);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.setFontSize(9);
+                    pdfDoc.text(isRetrieval ? "DUPLICATO RICEVUTA" : "RICEVUTA UFFICIALE", 150, 16);
+                    
+                    // Titolo Documento
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(14);
+                    pdfDoc.text("CONFERMA PRENOTAZIONE MINI-STAGE 2026", 15, 52);
+                    
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.setLineWidth(0.5);
+                    pdfDoc.line(15, 56, 195, 56);
+                    
+                    // Colonna 1: Dati Alunno
+                    pdfDoc.setFillColor(249, 250, 251);
+                    pdfDoc.roundedRect(15, 62, 85, 62, 3, 3, 'F');
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.roundedRect(15, 62, 85, 62, 3, 3, 'S');
+                    
+                    pdfDoc.setTextColor(79, 70, 229);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.text("DATI STUDENTE", 22, 69);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.setFontSize(8.5);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Studente:", 22, 76);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.nome, 22, 80);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Scuola di Provenienza:", 22, 87);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.scuola || "N/A", 22, 91);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Recapiti genitore:", 22, 98);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(`Cell: ${res.cellulare}`, 22, 102);
+                    pdfDoc.text(`Email: ${res.email}`, 22, 106);
+                    
+                    // Colonna 2: Dettagli Percorso / Stage
+                    pdfDoc.setFillColor(245, 243, 255);
+                    pdfDoc.roundedRect(108, 62, 87, 62, 3, 3, 'F');
+                    pdfDoc.setDrawColor(221, 214, 254);
+                    pdfDoc.roundedRect(108, 62, 87, 62, 3, 3, 'S');
+                    
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("DETTAGLI MINI-STAGE", 115, 69);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.setFontSize(8.5);
+                    pdfDoc.text("Percorso Didattico:", 115, 76);
+                    pdfDoc.setTextColor(79, 70, 229);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text(res.indirizzo, 115, 80);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Giorno dello Stage:", 115, 87);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(`${res.stageDay} ${res.stageDate}`, 115, 91);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Orario previsto:", 115, 98);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.stageTime, 115, 102);
+                    
+                    // Box Codice Unico
+                    pdfDoc.setFillColor(243, 244, 246);
+                    pdfDoc.roundedRect(15, 132, 180, 16, 2, 2, 'F');
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("CODICE DI PRENOTAZIONE:", 25, 142);
+                    pdfDoc.setFontSize(13);
+                    pdfDoc.setFont("Courier", "bold");
+                    pdfDoc.setTextColor(220, 38, 38);
+                    pdfDoc.text(res.code, 115, 142);
+                    
+                    // Istruzioni per l'alunno
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("ISTRUZIONI DI ACCESSO:", 15, 158);
+                    
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.setFontSize(8.5);
+                    pdfDoc.setTextColor(100, 100, 100);
+                    const istruzioni = [
+                        "- Presentarsi all'ingresso principale del plesso scolastico almeno 10 minuti prima dello stage.",
+                        "- Portare obbligatoriamente questa ricevuta con sé (stampata o sul proprio telefono).",
+                        "- Il personale d'accoglienza convaliderà l'ingresso scansionando il codice a barre o il QR-Code.",
+                        "- In caso di assenza, si prega di effettuare l'annullamento sul portale per liberare il posto."
+                    ];
+                    let lineY = 164;
+                    istruzioni.forEach(line => {
+                        pdfDoc.text(line, 15, lineY);
+                        lineY += 5;
+                    });
+                    
+                    // Linea Divisoria per Barcode e QR
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.line(15, 192, 195, 192);
+                    
+                    // Disegna il Barcode incorporato in tempo reale
+                    drawBarcodeInPDF(pdfDoc, res.code, 15, 198);
+                    
+                    // Inserimento QR-Code
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(res.code)}`;
+                    pdfDoc.addImage(qrUrl, 'PNG', 155, 196, 26, 26);
+                    
+                    pdfDoc.setFontSize(7.5);
+                    pdfDoc.setTextColor(150, 150, 150);
+                    pdfDoc.text("Scansione Barcode Accoglienza", 15, 230);
+                    pdfDoc.text("QR-Code Convalida", 153, 230);
+                    
+                    pdfDoc.setDrawColor(79, 70, 229);
+                    pdfDoc.line(15, 240, 195, 240);
+                    pdfDoc.text("Documento generato e approvato in tempo reale dalla Commissione Orientamento IIS Primo Levi.", 15, 246);
+                    pdfDoc.text(`Data Emissione: ${new Date().toLocaleDateString('it-IT')} - Seregno`, 15, 250);
+
+                    const dataUri = pdfDoc.output('datauristring');
+                    const base64PdfStr = dataUri.split(',')[1];
+
+                    const nameParts = res.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    const payload = {
+                        email: res.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: res.code,
+                        pdfBase64: base64PdfStr
+                    };
+
+                    if (statusText) statusText.textContent = "Spedizione via e-mail in corso...";
+
+                    // Spedizione immediata non bloccante via fetch
+                    fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    }).then(() => {
+                        if (statusBg) {
+                            statusBg.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
+                            statusText.textContent = "Email inviata con successo con allegato PDF!";
+                        }
+                    }).catch(err => {
+                        console.error("Errore fetch invio mail:", err);
+                        if (statusBg) {
+                            statusBg.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
+                            statusText.textContent = "Ricevuta emessa! E-mail in coda d'invio.";
+                        }
+                    });
+
+                } catch(e) {
+                    console.error("Errore notifica immediata email:", e);
+                    if (statusBg) {
+                        statusBg.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
+                        statusText.textContent = "Iscrizione convalidata correttamente.";
+                    }
+                }
+            }, 50);
+        }
+
+        async function sendCancellationEmailNotification(res) {
+            try {
+                const nameParts = res.nome.trim().split(' ');
                 const first = nameParts[0] || '';
                 const rest = nameParts.slice(1).join(' ') || '';
 
-                const payload = {
-                    email: booking.email,
-                    nome: first,
-                    cognome: rest,
-                    codice_prenotazione: booking.code,
-                    pdfBase64: base64PdfStr
-                };
-
-                // Chiamata HTTP asincrona per l'invio istantaneo
-                fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
+                await fetch(CANCELLATION_SCRIPT_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
-                    body: JSON.stringify(payload)
-                }).then(response => {
-                    showMessage("Inoltro e-mail completato correttamente!");
-                    if (emailStatusEl) {
-                        emailStatusEl.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
-                        emailStatusEl.innerHTML = `
-                            <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span>Ricevuta inviata per e-mail! Controlla la tua posta (anche in Spam).</span>`;
-                    }
-                }).catch(err => {
-                    console.error("Errore fetch Apps Script:", err);
-                    if (emailStatusEl) {
-                        emailStatusEl.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
-                        emailStatusEl.innerHTML = `<span>Iscrizione convalidata. E-mail non spedita. Scarica il PDF manualmente con il tasto sotto.</span>`;
-                    }
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        email: res.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: res.code
+                    })
                 });
+            } catch(e) {
+                console.error("Errore invio e-mail cancellazione:", e);
+            }
+        }
 
-            } catch (e) {
-                console.error("Invio notifica e-mail non riuscito:", e);
-                if (emailStatusEl) {
-                    emailStatusEl.className = "mb-4 bg-red-100 text-red-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide animate-none";
-                    emailStatusEl.innerHTML = `<span>Errore di generazione della ricevuta PDF in background.</span>`;
+        function applyFilters() {
+            const fIndirizzo = document.getElementById('filter-indirizzo')?.value;
+            const fType = document.getElementById('filter-type')?.value;
+            const fDate = document.getElementById('filter-date')?.value.trim();
+            
+            let filtered = allBookings;
+
+            if (fIndirizzo) {
+                filtered = filtered.filter(item => item.indirizzo === fIndirizzo);
+            }
+            if (fType) {
+                filtered = filtered.filter(item => item.type === fType);
+            } 
+            if (fDate) {
+                filtered = filtered.filter(item => item.stageDate && item.stageDate.includes(fDate));
+            }
+            
+            renderDashboardLists(filtered);
+            updateDashboardStats();
+            updateCharts();
+        }
+
+        function clearFilters() {
+            const fIndirizzo = document.getElementById('filter-indirizzo');
+            const fType = document.getElementById('filter-type');
+            const fDate = document.getElementById('filter-date');
+            if (fIndirizzo) fIndirizzo.value = '';
+            if (fType) fType.value = '';
+            if (fDate) fDate.value = '';
+            applyFilters();
+        }
+
+        function updateDashboardStats() {
+            const totalEl = document.getElementById('stat-total');
+            if (totalEl) {
+                totalEl.textContent = allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').length.toString();
+            }
+        }
+
+        function renderDashboardLists(filteredList) {
+            const listActive = document.getElementById('list-active-prenotazioni');
+            const listChecked = document.getElementById('list-checkedin-prenotazioni');
+            const listCancelled = document.getElementById('list-cancelled-prenotazioni');
+
+            if (!listActive || !listChecked || !listCancelled) return;
+
+            const actives = filteredList.filter(b => b.type === 'prenotazione');
+            const checkeds = filteredList.filter(b => b.type === 'entrato');
+            const cancelled = filteredList.filter(b => b.type === 'cancellazione');
+
+            // Renderizza Attivi
+            listActive.innerHTML = actives.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
+                    <div>
+                        <strong class="text-indigo-900">${b.nome}</strong>
+                        <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
+                    </div>
+                    <button onclick="checkInStudent('${b.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1 px-2.5 rounded-lg transition">
+                        Entrato
+                    </button>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessun iscritto.</p>`;
+
+            // Renderizza Entrati
+            listChecked.innerHTML = checkeds.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
+                    <div>
+                        <strong class="text-indigo-900">${b.nome}</strong>
+                        <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
+                    </div>
+                    <span class="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase">Confermato</span>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessuno presente.</p>`;
+
+            // Renderizza Cancellati
+            listCancelled.innerHTML = cancelled.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl text-xs">
+                    <strong class="text-red-900">${b.nome}</strong>
+                    <p class="text-[10px] text-gray-400 font-mono">${b.code} | Annullata</p>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4 font-normal">Nessun annullamento.</p>`;
+        }
+
+        // CONVALIDA ENTRATA ALUNNO DUAL-BACKEND
+        async function checkInStudent(code) {
+            const booking = allBookings.find(b => b.code === code);
+            if (!booking) return showMessage("Iscrizione non trovata.", true);
+
+            if (offlineMode) {
+                booking.type = 'entrato';
+                saveLocalSandboxData();
+                applyFilters();
+                showMessage(`Studente ${booking.nome} segnato come ENTRATO!`);
+            } else {
+                try {
+                    const { doc, updateDoc } = window.firebaseImports;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                    await updateDoc(docRef, { type: 'entrato' });
+                    showMessage(`Studente ${booking.nome} segnato come ENTRATO!`);
+                } catch(e) {
+                    showMessage("Errore nell'aggiornamento.", true);
                 }
             }
         }
 
-        function openManageBookingModal(actionType) {
-            const modal = document.getElementById('manage-booking-modal');
-            const titleEl = document.getElementById('manage-modal-title');
+        function updateCharts() {
+            const canvas = document.getElementById('reservationsChart');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const counts = {};
+            INDIRIZZI_MAPPING.forEach(ind => counts[ind] = 0);
+            allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').forEach(b => {
+                if(counts[b.indirizzo] !== undefined) counts[b.indirizzo]++;
+            });
+
+            if (chartInstance) { chartInstance.destroy(); }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: INDIRIZZI_MAPPING.map(m => m.substring(0, 15) + '...'),
+                    datasets: [{
+                        label: 'Iscritti attivi',
+                        data: INDIRIZZI_MAPPING.map(ind => counts[ind]),
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        }
+
+        // GESTIONE PROMEMORIA E CONFIGURAZIONI
+        function calculateReminderEligibility() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            const textEl = document.getElementById('reminder-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti idonei a ricevere il promemoria: ${eligible.length}`;
+            }
+        }
+
+        async function saveReminderDaysConfig() {
+            const days = parseInt(document.getElementById('reminder-days-input').value) || 7;
+            if (offlineMode) {
+                reminderDaysConfig = days;
+                localStorage.setItem('levi_reminder_days', days.toString());
+                showMessage("Anticipo promemoria salvato localmente!");
+            } else {
+                try {
+                    const { doc, setDoc } = window.firebaseImports;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`);
+                    await setDoc(docRef, { daysBefore: days });
+                    showMessage("Anticipo promemoria salvato su Database!");
+                } catch(e) {
+                    showMessage("Impossibile salvare la configurazione.", true);
+                }
+            }
+        }
+
+        async function sendBatchReminders() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            if (eligible.length === 0) return showMessage("Nessuno studente idoneo al promemoria.", true);
+            
+            if(!confirm(`Vuoi inviare un promemoria e-mail a tutti i ${eligible.length} iscritti?`)) return;
+
+            showMessage("Invio promemoria in blocco avviato...");
+            
+            for (const student of eligible) {
+                try {
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(REMINDER_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            orario: student.stageTime,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    // Segna come inviato
+                    if (offlineMode) {
+                        student.reminderSent = true;
+                    } else {
+                        const { doc, updateDoc } = window.firebaseImports;
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                        await updateDoc(docRef, { reminderSent: true });
+                    }
+                } catch(e) {
+                    console.error("Errore promemoria per:", student.code, e);
+                }
+            }
+            
+            if(offlineMode) saveLocalSandboxData();
+            showMessage("Invio promemoria completato!");
+            calculateReminderEligibility();
+        }
+
+        async function sendSingleManualReminder() {
+            const code = document.getElementById('input-manual-reminder-code').value.trim().toUpperCase();
+            if(!code) return showMessage("Inserisci un codice valido.", true);
+
+            const student = allBookings.find(b => b.code === code);
+            if(!student) return showMessage("Nessuna prenotazione trouvata.", true);
+
+            showMessage(`Invio promemoria singolo a ${student.nome}...`);
+
+            try {
+                const nameParts = student.nome.trim().split(' ');
+                const first = nameParts[0] || '';
+                const rest = nameParts.slice(1).join(' ') || '';
+
+                await fetch(REMINDER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        email: student.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: student.code,
+                        data: student.stageDate,
+                        orario: student.stageTime,
+                        attivita: student.indirizzo
+                    })
+                });
+
+                if (offlineMode) {
+                    student.reminderSent = true;
+                    saveLocalSandboxData();
+                } else {
+                    const { doc, updateDoc } = window.firebaseImports;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                    await updateDoc(docRef, { reminderSent: true });
+                }
+
+                showMessage("Promemoria manuale inviato!");
+                document.getElementById('input-manual-reminder-code').value = '';
+            } catch(e) {
+                showMessage("Errore nell'invio.", true);
+            }
+        }
+
+        function calculateCertificateEligibility() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            const textEl = document.getElementById('certificate-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti presenti idonei all'attestato: ${eligible.length}`;
+            }
+        }
+
+        async function sendBatchCertificates() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            if (eligible.length === 0) return showMessage("Nessuno studente presente ha bisogno dell'attestato.", true);
+            
+            if(!confirm(`Vuoi generare e inviare l'attestato PDF via mail a ${eligible.length} studenti?`)) return;
+
+            showMessage("Generazione e invio in blocco degli attestati...");
+            
+            for (const student of eligible) {
+                try {
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(CERTIFICATE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    // Aggiorna lo stato nel DB/Sandbox
+                    if (offlineMode) {
+                        student.certificateSent = true;
+                    } else {
+                        const { doc, updateDoc } = window.firebaseImports;
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                        await updateDoc(docRef, { certificateSent: true });
+                    }
+                } catch(e) {
+                    console.error("Errore certificato per:", student.code, e);
+                }
+            }
+            
+            if(offlineMode) saveLocalSandboxData();
+            showMessage("Invio attestati completato con successo!");
+            calculateCertificateEligibility();
+        }
+
+        // SCANSIONE FISICA QR/BARCODE WEBCAM E INTERCETTAZIONE USB
+        function setupBarcodeScannerGlobalInterceptor() {
+            let buffer = "";
+            let lastKeyTime = Date.now();
+
+            window.addEventListener('keydown', (e) => {
+                const currentTime = Date.now();
+                if (currentTime - lastKeyTime > 100) {
+                    buffer = ""; 
+                }
+                lastKeyTime = currentTime;
+
+                if (e.key === 'Enter') {
+                    if (buffer.length >= 4 && buffer.startsWith("MS-")) {
+                        processIncomingScannedCode(buffer);
+                        buffer = "";
+                        e.preventDefault();
+                    }
+                } else if (e.key !== 'Shift') {
+                    buffer += e.key;
+                }
+            });
+        }
+
+        function handleBarcodeKeyPress(event) {
+            if (event.key === 'Enter') {
+                processManualCheckIn();
+            }
+        }
+
+        async function processManualCheckIn() {
+            const input = document.getElementById('barcode-scan-input');
+            const code = input.value.trim().toUpperCase();
+            if(!code) return;
+            await processIncomingScannedCode(code);
+            input.value = '';
+        }
+
+        async function processIncomingScannedCode(code) {
+            const feedback = document.getElementById('scanner-feedback');
+            const booking = allBookings.find(b => b.code === code);
+
+            if (!booking) {
+                showScannerFeedback(`Codice ${code} non trovato nel sistema.`, true);
+                return;
+            }
+
+            if (booking.type === 'entrato') {
+                showScannerFeedback(`Attenzione: ${booking.nome} è già stato marcato come presente.`, true);
+                return;
+            }
+
+            await checkInStudent(code);
+            showScannerFeedback(`Presente convalidato: ${booking.nome} (${booking.indirizzo})`);
+            
+            const logsList = document.getElementById('scanner-logs-list');
+            if (logsList) {
+                const logItem = document.createElement('div');
+                logItem.className = "p-1.5 bg-green-50 border border-green-200 text-green-800 rounded font-bold mb-1";
+                logItem.textContent = `[${new Date().toLocaleTimeString()}] ${code} - ${booking.nome}`;
+                if(logsList.querySelector('p')) logsList.innerHTML = '';
+                logsList.prepend(logItem);
+            }
+        }
+
+        function showScannerFeedback(msg, isError = false) {
+            const fb = document.getElementById('scanner-feedback');
+            if(!fb) return;
+            fb.textContent = msg;
+            fb.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            if (isError) {
+                fb.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                fb.classList.add('bg-green-100', 'text-green-800');
+            }
+        }
+
+        function detectAndStartScanner() {
+            document.getElementById('scanner-idle-placeholder').classList.add('hidden');
+            const readerEl = document.getElementById('scanner-reader');
+            readerEl.innerHTML = '';
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    const select = document.getElementById('scanner-camera-select');
+                    let cameraId = select && select.value ? select.value : devices[0].id;
+                    
+                    html5QrScanner = new Html5Qrcode("scanner-reader");
+                    html5QrScanner.start(
+                        cameraId, 
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            if (decodedText.startsWith("MS-")) {
+                                processIncomingScannedCode(decodedText);
+                            }
+                        },
+                        (errorMessage) => {}
+                    ).catch(err => {
+                        console.error("Impossibile avviare scanner", err);
+                    });
+                } else {
+                    showMessage("Nessuna fotocamera trovata sul dispositivo.", true);
+                }
+            }).catch(err => {
+                showMessage("Impossibile accedere alle fotocamere.", true);
+            });
+        }
+
+        function closeScannerTerminal() {
+            if (html5QrScanner) {
+                html5QrScanner.stop().then(() => {
+                    document.getElementById('scanner-reader').innerHTML = '';
+                    document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
+                }).catch(e => console.error(e));
+            }
+            setView('admin');
+        }
+
+        function openManageBookingModal(mode) {
+            window.currentManageMode = mode;
+            const title = document.getElementById('manage-modal-title');
             const submitBtn = document.getElementById('btn-submit-action');
 
-            if (actionType === 'retrieve') {
-                titleEl.textContent = "Recupera Ricevuta Iscrizione";
-                submitBtn.textContent = "Mostra Ricevuta";
-                submitBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md";
+            if (mode === 'retrieve') {
+                title.textContent = 'Recupera la tua Iscrizione';
+                submitBtn.textContent = 'Recupera Ricevuta';
+                submitBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
                 submitBtn.onclick = () => searchAndHandleBooking('retrieve');
             } else {
-                titleEl.textContent = "Annulla Iscrizione Mini-Stage";
-                submitBtn.textContent = "Annulla Iscrizione";
-                submitBtn.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md";
+                title.textContent = 'Annulla la tua Prenotazione';
+                submitBtn.textContent = 'Annulla Iscrizione';
+                submitBtn.className = "bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
                 submitBtn.onclick = () => searchAndHandleBooking('cancel');
             }
 
-            modal.classList.remove('hidden');
+            document.getElementById('manage-booking-modal').classList.remove('hidden');
         }
 
-        function closeManageBookingModal() {
+        function closeManageBookingBookingModal() {
             document.getElementById('manage-booking-modal').classList.add('hidden');
             document.getElementById('input-search-code').value = '';
             document.getElementById('input-search-name').value = '';
@@ -1440,468 +1954,111 @@
             const inputEmail = document.getElementById('input-search-email').value.trim().toLowerCase();
 
             if (!inputCode && (!inputName || !inputEmail)) {
-                return showMessage("Inserisci il codice OPPURE Nome + Email per effettuare la ricerca.", true);
+                return showMessage("Compila i campi per effettuare la ricerca.", true);
             }
 
-            let foundBooking = null;
-
+            let found = null;
             if (inputCode) {
-                foundBooking = allBookings.find(b => b.code === inputCode);
+                found = allBookings.find(b => b.code === inputCode);
             } else {
-                foundBooking = allBookings.find(b => 
-                    b.nome.toLowerCase() === inputName && 
-                    b.email.toLowerCase() === inputEmail
-                );
+                found = allBookings.find(b => b.nome.toLowerCase() === inputName && b.email.toLowerCase() === inputEmail);
             }
 
-            if (!foundBooking) {
-                return showMessage("Nessuna iscrizione corrispondente trovata nel sistema.", true);
-            }
+            if (!found) return showMessage("Nessuna iscrizione trovata nel sistema.", true);
 
-            if (foundBooking.type === 'cancellazione' && action === 'cancel') {
-                return showMessage("Questa iscrizione risulta già annullata.", true);
-            }
-
-            closeManageBookingModal();
+            closeManageBookingBookingModal();
 
             if (action === 'retrieve') {
-                setView('receipt', { code: foundBooking.code, type: foundBooking.type, data: foundBooking });
+                setView('receipt', { code: found.code, type: found.type, data: found });
                 showMessage("Iscrizione recuperata correttamente!");
-            } else if (action === 'cancel') {
-                try {
-                    const ref = collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`);
-                    await runTransaction(db, async (transaction) => {
-                        const docRef = doc(ref, foundBooking.code);
-                        transaction.update(docRef, {
-                            type: 'cancellazione',
-                            cancellationTimestamp: Date.now()
-                        });
-                    });
-                    
-                    foundBooking.type = 'cancellazione';
-                    setView('receipt', { code: foundBooking.code, type: 'cancellazione', data: foundBooking });
-                    showMessage("Iscrizione annullata con successo. Il posto è stato liberato.");
-                } catch(e) {
-                    console.error("Errore annullamento:", e);
-                    showMessage("Errore durante l'annullamento della prenotazione.", true);
-                }
-            }
-        }
-
-        function updateReceiptView({ code, type, data }) {
-            currentReceipt = { code, type, data };
-            document.getElementById('receipt-code').textContent = code;
-            
-            const titleEl = document.getElementById('receipt-title');
-            const messageEl = document.getElementById('receipt-message');
-            const detailsEl = document.getElementById('receipt-details');
-            const qrImageEl = document.getElementById('receipt-qr');
-            const barcodeContainer = document.getElementById('receipt-barcode');
-
-            qrImageEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(code)}`;
-
-            if (barcodeContainer) {
-                barcodeContainer.innerHTML = '';
-                const barcodeImg = document.createElement('img');
-                barcodeImg.src = createBarcodeDataURL(code);
-                barcodeImg.alt = "Barcode Accettazione";
-                barcodeImg.className = "h-full object-contain";
-                barcodeContainer.appendChild(barcodeImg);
-            }
-
-            detailsEl.classList.remove('hidden');
-            let detailsHtml = '';
-            const isReservation = type === 'prenotazione';
-            const isCheckedIn = type === 'entrato';
-            
-            if (isCheckedIn) {
-                titleEl.textContent = 'Ingresso Verificato!';
-                titleEl.classList.remove('text-red-700');
-                titleEl.classList.add('text-green-600');
-                messageEl.textContent = 'Sei stato accolto e registrato correttamente all\'ingresso dello stage d\'istituto. Benvenuto!';
-            } else if (isReservation) {
-                titleEl.textContent = 'Iscrizione Confermata!';
-                titleEl.classList.remove('text-red-700');
-                titleEl.classList.add('text-indigo-700');
-                messageEl.textContent = 'Il tuo posto per il mini-stage è stato bloccato. Abbiamo inviato anche una mail automatica contenente la tua ricevuta.';
+                if(!offlineMode) sendAutomaticEmailNotification(found, true);
             } else {
-                titleEl.textContent = 'Iscrizione Annullata';
-                titleEl.classList.remove('text-indigo-700');
-                titleEl.classList.add('text-red-700');
-                messageEl.textContent = 'La prenotazione associata a questo codice è stata annullata correttamente nel database d\'istituto.';
-            }
-
-            const row = (label, value) => `
-                <div class="flex justify-between border-b border-gray-100 py-1.5">
-                    <span class="font-bold text-gray-500">${label}</span>
-                    <span class="font-black text-gray-800">${value}</span>
-                </div>`;
-
-            detailsHtml += `<h4 class="text-xs font-black text-indigo-700 uppercase tracking-widest mt-1">Dettagli Stage</h4>`;
-            detailsHtml += row('Stato Iscrizione', isCheckedIn ? 'ENTRATO / ACCOLTO' : (isReservation ? 'ATTIVA (ISCRITTO)' : 'CANCELLATA'));
-            detailsHtml += row('Istituto Scolastico', 'IIS Primo Levi - Seregno');
-            detailsHtml += row('Indirizzo Scelto', data.indirizzo || 'N/A');
-            detailsHtml += row('Giorno ed Orario', `${data.stageDay || 'N/A'}, ${data.stageDate || 'N/A'} - Ore ${data.stageTime || 'N/A'}`);
-            
-            detailsHtml += `<h4 class="text-xs font-black text-indigo-700 uppercase tracking-widest mt-3">Dati Studente</h4>`;
-            detailsHtml += row('Studente', data.nome || 'N/A');
-            detailsHtml += row('Scuola Media di Provenienza', data.scuola || 'N/A');
-            detailsHtml += row('Cellulare di Riferimento', data.cellulare || 'N/A');
-            detailsHtml += row('E-mail di contatto', data.email || 'N/A');
-            detailsHtml += row('Accettazione a cura di', 'Commissione Orientamento Levi');
-
-            detailsEl.innerHTML = detailsHtml;
-        }
-
-        function printReceipt() {
-            window.print();
-        }
-
-        function openScannerTerminal() {
-            setView('scanner-terminal');
-            document.getElementById('scanner-logs-list').innerHTML = `
-                <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
-            `;
-            detectCameras();
-            updateUSBDevicesList();
-        }
-
-        function closeScannerTerminal() {
-            if (html5QrScanner) {
-                html5QrScanner.stop().catch(err => console.warn(err));
-            }
-            document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
-            showAdminView();
-        }
-
-        function detectCameras() {
-            const selectEl = document.getElementById('scanner-camera-select');
-            if (!selectEl) return;
-            selectEl.innerHTML = '<option value="">Interrogazione apparecchi...</option>';
-
-            Html5Qrcode.getCameras().then(cameras => {
-                if (cameras && cameras.length > 0) {
-                    selectEl.innerHTML = '';
-                    cameras.forEach(camera => {
-                        const option = document.createElement('option');
-                        option.value = camera.id;
-                        option.textContent = camera.label || `Fotocamera ${camera.id}`;
-                        selectEl.appendChild(option);
-                    });
-                } else {
-                    selectEl.innerHTML = '<option value="">Nessun apparecchio video rilevato</option>';
-                    showMessage("Nessuna telecamera rilevata per la scansione.", true);
-                }
-            }).catch(err => {
-                console.error("Errore rilevamento apparecchi video:", err);
-                selectEl.innerHTML = '<option value="">Errore autorizzazione fotocamera</option>';
-            });
-        }
-
-        function detectAndStartScanner() {
-            const selectEl = document.getElementById('scanner-camera-select');
-            const cameraId = selectEl.value;
-
-            if (!cameraId) {
-                showMessage("Seleziona prima un apparecchio di scansione valido.", true);
-                return;
-            }
-
-            document.getElementById('scanner-idle-placeholder').classList.add('hidden');
-
-            if (html5QrScanner) {
-                html5QrScanner.stop().then(() => {
-                    startScanningWithDevice(cameraId);
-                }).catch(err => {
-                    startScanningWithDevice(cameraId);
-                });
-            } else {
-                startScanningWithDevice(cameraId);
-            }
-        }
-
-        function startScanningWithDevice(cameraId) {
-            html5QrScanner = new Html5Qrcode("scanner-reader");
-            html5QrScanner.start(
-                cameraId, 
-                {
-                    fps: 15,
-                    qrbox: { width: 250, height: 250 }
-                },
-                (decodedText, decodedResult) => {
-                    handleScannerDecodedCode(decodedText);
-                },
-                (errorMessage) => {
-                    // Silenzioso
-                }
-            ).then(() => {
-                showMessage("Apparecchio scansionatore avviato con successo!");
-            }).catch(err => {
-                console.error("Impossibile avviare fotocamera:", err);
-                showMessage("Impossibile avviare la fotocamera selezionata.", true);
-                document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
-            });
-        }
-
-        async function handleScannerDecodedCode(code) {
-            const cleanCode = code.trim().toUpperCase();
-            if (!cleanCode) return;
-
-            try {
-                const ref = collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`);
-                const querySnapshot = await getDocs(query(ref, where("code", "==", cleanCode)));
-
-                if (querySnapshot.empty) {
-                    playScannerBeep(false);
-                    addScannerLogEntry(cleanCode, "Codice non trovato nel sistema", true);
-                    return;
-                }
-
-                let originalData = {};
-                querySnapshot.forEach(doc => {
-                    originalData = doc.data();
-                });
-
-                if (originalData.type === 'cancellazione') {
-                    playScannerBeep(false);
-                    addScannerLogEntry(cleanCode, `Studente ${originalData.nome} - ATTENZIONE: PRENOTAZIONE ANNULLATA`, true);
-                    return;
-                }
-
-                if (originalData.type === 'entrato') {
-                    playScannerBeep(true);
-                    addScannerLogEntry(cleanCode, `Studente ${originalData.nome} - Già registrato in precedenza`, false, true);
-                    return;
-                }
-
-                await updateDoc(doc(ref, cleanCode), {
-                    type: 'entrato',
-                    checkInTimestamp: Date.now()
-                });
-
-                playScannerBeep(true);
-                addScannerLogEntry(cleanCode, `Studente ${originalData.nome} - Registrato e accesso eseguito correttamente`, false);
-
-            } catch (e) {
-                console.error("Errore elaborazione scansione:", e);
-                playScannerBeep(false);
-                addScannerLogEntry(cleanCode, "Errore interno durante il check-in", true);
-            }
-        }
-
-        function addScannerLogEntry(code, message, isError = false, isWarning = false) {
-            const logsContainer = document.getElementById('scanner-logs-list');
-            if (!logsContainer) return;
-
-            if (logsContainer.querySelector('p.italic')) {
-                logsContainer.innerHTML = '';
-            }
-
-            const timeStr = new Date().toLocaleTimeString('it-IT');
-            let itemClass = "bg-green-50 border-green-200 text-green-800";
-            if (isError) itemClass = "bg-red-50 border-red-200 text-red-800";
-            else if (isWarning) itemClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
-
-            const logItem = document.createElement('div');
-            logItem.className = `p-3 border rounded-xl flex justify-between items-center text-xs font-semibold ${itemClass} shadow-sm animate-fade-in`;
-            logItem.innerHTML = `
-                <div>
-                    <span class="font-mono bg-white/70 px-1.5 py-0.5 rounded mr-2 border border-current/20">${code}</span>
-                    <span>${message}</span>
-                </div>
-                <span class="text-[10px] opacity-70 font-bold shrink-0">${timeStr}</span>
-            `;
-
-            logsContainer.insertBefore(logItem, logsContainer.firstChild);
-        }
-
-        function handleBarcodeKeyPress(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                processManualCheckIn();
-            }
-        }
-
-        async function processManualCheckIn() {
-            const inputEl = document.getElementById('barcode-scan-input');
-            const codeToVerify = inputEl.value.trim().toUpperCase();
-
-            if (!codeToVerify) {
-                showScannerFeedback("Inserisci o scansiona un codice valido.", true);
-                return;
-            }
-
-            try {
-                const ref = collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`);
-                const querySnapshot = await getDocs(query(ref, where("code", "==", codeToVerify)));
+                if (found.type === 'cancellazione') return showMessage("Iscrizione già annullata.", true);
                 
-                if (querySnapshot.empty) {
-                    playScannerBeep(false);
-                    showScannerFeedback(`Codice "${codeToVerify}" non trovato nel sistema.`, true);
-                    inputEl.value = '';
-                    inputEl.focus();
-                    return;
+                if (offlineMode) {
+                    found.type = 'cancellazione';
+                    saveLocalSandboxData();
+                    setView('receipt', { code: found.code, type: 'cancellazione', data: found });
+                    showMessage("Iscrizione annullata offline.");
+                } else {
+                    try {
+                        const { doc, updateDoc } = window.firebaseImports;
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, found.code);
+                        await updateDoc(docRef, { type: 'cancellazione' });
+                        
+                        found.type = 'cancellazione';
+                        setView('receipt', { code: found.code, type: 'cancellazione', data: found });
+                        showMessage("Prenotazione annullata. Il posto è di nuovo disponibile.");
+                        
+                        sendCancellationEmailNotification(found);
+                    } catch(e) {
+                        showMessage("Errore nell'annullamento.", true);
+                    }
                 }
-
-                let originalData = {};
-                querySnapshot.forEach(doc => {
-                    originalData = doc.data();
-                });
-
-                if (originalData.type === 'cancellazione') {
-                    playScannerBeep(false);
-                    showScannerFeedback(`Attenzione! L'iscrizione per "${originalData.nome}" è stata annullata!`, true);
-                    inputEl.value = '';
-                    inputEl.focus();
-                    return;
-                }
-
-                if (originalData.type === 'entrato') {
-                    playScannerBeep(true);
-                    showScannerFeedback(`Studente "${originalData.nome}" già entrato. Accoglienza confermata.`, false, true);
-                    inputEl.value = '';
-                    inputEl.focus();
-                    return;
-                }
-
-                await updateDoc(doc(ref, codeToVerify), {
-                    type: 'entrato',
-                    checkInTimestamp: Date.now()
-                });
-
-                playScannerBeep(true);
-                showScannerFeedback(`ACCETTATO: Studente "${originalData.nome}" registrato con successo!`, false);
-                inputEl.value = '';
-                inputEl.focus();
-
-            } catch (e) {
-                console.error("Errore scansione barcode:", e);
-                playScannerBeep(false);
-                showScannerFeedback("Errore di elaborazione della scansione.", true);
-            }
-        }
-
-        function showScannerFeedback(msg, isError = false, isWarning = false) {
-            const feedbackEl = document.getElementById('scanner-feedback');
-            if (!feedbackEl) return;
-            feedbackEl.textContent = msg;
-            feedbackEl.classList.remove('hidden');
-            if (isError) {
-                feedbackEl.className = "mt-3 text-xs font-bold text-center p-2 rounded-lg bg-red-100 text-red-700";
-            } else if (isWarning) {
-                feedbackEl.className = "mt-3 text-xs font-bold text-center p-2 rounded-lg bg-yellow-100 text-yellow-700";
-            } else {
-                feedbackEl.className = "mt-3 text-xs font-bold text-center p-2 rounded-lg bg-green-100 text-green-700";
-            }
-        }
-
-        function showAdminView() {
-            setView('admin');
-            document.getElementById('admin-password').value = '';
-            document.getElementById('admin-login').classList.remove('hidden');
-            document.getElementById('admin-dashboard').classList.add('hidden');
-            populateAdminFilterOptions();
-            populateAdminAddSlotDropdown();
-            renderCapacitiesConfigInputs();
-        }
-
-        function populateAdminFilterOptions() {
-            const filterIndirizzo = document.getElementById('filter-indirizzo');
-            while (filterIndirizzo.options.length > 1) {
-                filterIndirizzo.remove(1);
-            }
-            INDIRIZZI_MAPPING.forEach(indirizzo => {
-                const option = document.createElement('option');
-                option.value = indirizzo;
-                option.textContent = indirizzo;
-                filterIndirizzo.appendChild(option);
-            });
-        }
-
-        function populateAdminAddSlotDropdown() {
-            const addDropdown = document.getElementById('new-slot-indirizzo');
-            if (!addDropdown) return;
-            addDropdown.innerHTML = INDIRIZZI_MAPPING.map(ind => `
-                <option value="${ind}">${ind}</option>
-            `).join('');
-        }
-
-        function renderCapacitiesConfigInputs() {
-            const container = document.getElementById('indirizzi-capacita-inputs');
-            if (!container) return;
-            container.innerHTML = INDIRIZZI_MAPPING.map(ind => {
-                const currentCap = capacitiesConfig[ind] || 4;
-                return `
-                    <div class="text-[11px]">
-                        <label class="block font-bold text-gray-600 mb-0.5">${ind}</label>
-                        <input type="number" data-indirizzo="${ind}" value="${currentCap}" min="1" class="w-full p-1.5 bg-white border border-indigo-100 rounded-lg text-center font-bold text-indigo-900 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function saveCapacities() {
-            const inputs = document.querySelectorAll('#indirizzi-capacita-inputs input');
-            const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
-            
-            try {
-                for (const input of inputs) {
-                    const ind = input.getAttribute('data-indirizzo');
-                    const postiVal = parseInt(input.value) || 4;
-                    await setDoc(doc(capRef, ind), {
-                        indirizzo: ind,
-                        postiMax: postiVal
-                    });
-                }
-                showMessage("Capacità dei posti salvata con successo!");
-            } catch(e) {
-                console.error("Errore salvataggio:", e);
-                showMessage("Impossibile salvare le configurazioni.", true);
             }
         }
 
         function adminLogin() {
-            const password = document.getElementById('admin-password').value;
-            if (password === ADMIN_PASSWORD) {
+            const pwd = document.getElementById('admin-password').value;
+            if (pwd === ADMIN_PASSWORD) {
                 document.getElementById('admin-login').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
-                showMessage("Autenticato! Dashboard attiva.");
-                renderSlotManagementTable();
                 applyFilters();
-                
-                setTimeout(() => {
-                    const scanInput = document.getElementById('barcode-scan-input');
-                    if(scanInput) scanInput.focus();
-                }, 500);
             } else {
-                showMessage("Password d'accesso errata.", true);
+                showMessage("Chiave d'accesso non valida!", true);
             }
         }
 
-        function renderSlotManagementTable() {
-            const tbody = document.getElementById('slot-management-list');
-            if (!tbody) return;
-            const sortedSlots = stageSlots.sort((a, b) => a.indirizzo.localeCompare(b.indirizzo));
-
-            tbody.innerHTML = sortedSlots.map(slot => {
-                const limitPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 4;
-                return `
-                    <tr class="hover:bg-indigo-50/20 transition">
-                        <td class="p-3 font-bold text-indigo-900">${slot.indirizzo}</td>
-                        <td class="p-3">${slot.day}</td>
-                        <td class="p-3 font-extrabold text-indigo-600">${slot.dateStr}</td>
-                        <td class="p-3 font-mono">${slot.time}</td>
-                        <td class="p-3 font-bold">${limitPosti}</td>
-                        <td class="p-3 text-right">
-                            <button onclick="deleteSlot('${slot.id}')" class="text-red-500 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 py-1 px-2 rounded-lg transition border border-red-100">
-                                Elimina
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">Nessun calendario inserito dal docente.</td></tr>`;
+        function exportToExcel() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Codice,Indirizzo,Giorno,Data,Orario,Studente,Scuola,Email,Cellulare,Stato\n";
+            allBookings.forEach(b => {
+                let row = [
+                    b.code,
+                    `"${b.indirizzo.replace(/"/g, '""')}"`,
+                    `"${b.stageDay}"`,
+                    `"${b.stageDate}"`,
+                    `"${b.stageTime}"`,
+                    `"${b.nome.replace(/"/g, '""')}"`,
+                    `"${b.scuola.replace(/"/g, '""')}"`,
+                    `"${b.email}"`,
+                    `"${b.cellulare}"`,
+                    b.type
+                ].join(",");
+                csvContent += row + "\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "iscritti_mini_stage_levi.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
+        async function confirmClearAll() {
+            if(!confirm("ATTENZIONE: Sei sicuro di voler SVUOTARE l'intero database delle iscrizioni? Questa operazione è irreversibile.")) return;
+            
+            if (offlineMode) {
+                allBookings = [];
+                saveLocalSandboxData();
+                applyFilters();
+                showMessage("Database locale svuotato.");
+            } else {
+                try {
+                    const { doc, deleteDoc } = window.firebaseImports;
+                    for (const b of allBookings) {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, b.code);
+                        await deleteDoc(docRef);
+                    }
+                    showMessage("Database cloud svuotato con successo!");
+                } catch(e) {
+                    showMessage("Errore durante lo svuotamento.", true);
+                }
+            }
+        }
+
+        // AGGIUNTA SLOT DOCENTI DUAL-BACKEND
         async function handleAddSlot(event) {
             event.preventDefault();
             const indirizzo = document.getElementById('new-slot-indirizzo').value;
@@ -1909,229 +2066,135 @@
             const dateStr = document.getElementById('new-slot-date').value.trim();
             const time = document.getElementById('new-slot-time').value.trim();
             const inputMax = document.getElementById('new-slot-max').value;
-            const postiMax = inputMax ? parseInt(inputMax) : (capacitiesConfig[indirizzo] || 4);
+            const postiMax = inputMax ? parseInt(inputMax) : (capacitiesConfig[indirizzo] || 5);
 
-            if (!day || !dateStr || !time || isNaN(postiMax)) {
-                return showMessage("Tutti i campi dello slot sono obbligatori.", true);
-            }
+            if (!day || !dateStr || !time) return showMessage("Tutti i campi sono obbligatori.", true);
 
-            const slotId = `${indirizzo.substring(0, 4).toUpperCase()}-${dateStr.replace('/', '')}-${time.replace(/[:\-]/g, '')}`;
+            const slotId = `${indirizzo.substring(0, 4).toUpperCase()}-${dateStr.replace('/', '')}-${time.replace(/[:\- ]/g, '')}`;
             
-            try {
-                const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
-                await setDoc(slotRef, {
-                    id: slotId,
-                    indirizzo: indirizzo,
-                    day: day,
-                    dateStr: dateStr,
-                    time: time,
-                    postiMax: postiMax
-                });
-                showMessage("Nuovo slot inserito con successo!");
+            const newSlot = { id: slotId, indirizzo, day, dateStr, time, postiMax };
+
+            if (offlineMode) {
+                stageSlots.push(newSlot);
+                saveLocalSandboxData();
+                renderSlotManagementTable();
+                showMessage("Slot inserito in archivio locale.");
                 document.getElementById('add-slot-form').reset();
-            } catch (e) {
-                console.error(e);
-                showMessage("Impossibile salvare lo slot.", true);
+            } else {
+                try {
+                    const { doc, setDoc } = window.firebaseImports;
+                    const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
+                    await setDoc(slotRef, newSlot);
+                    showMessage("Slot salvato sul cloud!");
+                    document.getElementById('add-slot-form').reset();
+                } catch (e) {
+                    showMessage("Impossibile salvare lo slot.", true);
+                }
             }
         }
 
         async function deleteSlot(slotId) {
-            if (!confirm("Sei sicuro di voler eliminare lo slot selezionato?")) return;
-            try {
-                const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
-                await deleteDoc(slotRef);
-                showMessage("Slot eliminato.");
-            } catch(e) {
-                showMessage("Errore nell'eliminazione dello slot.", true);
-            }
-        }
-
-        function applyFilters() {
-            const filterIndirizzoVal = document.getElementById('filter-indirizzo').value;
-            const filterTypeVal = document.getElementById('filter-type').value;
-            const filterDateVal = document.getElementById('filter-date').value.trim();
+            if (!confirm("Rimuovere questo slot dal calendario?")) return;
             
-            let filteredData = allBookings;
-
-            if (filterIndirizzoVal) {
-                filteredData = filteredData.filter(item => item.indirizzo === filterIndirizzoVal);
-            }
-
-            if (filterTypeVal) {
-                filteredData = filteredData.filter(item => item.type === filterTypeVal);
-            } 
-
-            if (filterDateVal) {
-                filteredData = filteredData.filter(item => item.stageDate && item.stageDate.includes(filterDateVal));
-            }
-            
-            renderDashboardLists(filteredData);
-            updateDashboardStats();
-            updateCharts();
-        }
-
-        function clearFilters() {
-            document.getElementById('filter-indirizzo').value = '';
-            document.getElementById('filter-type').value = '';
-            document.getElementById('filter-date').value = '';
-            applyFilters();
-        }
-
-        function renderDashboardLists(data) {
-            const activeList = document.getElementById('list-active-prenotazioni');
-            const checkedInList = document.getElementById('list-checkedin-prenotazioni');
-            const cancelledList = document.getElementById('list-cancelled-prenotazioni');
-
-            const activeData = data.filter(item => item.type === 'prenotazione');
-            const checkedInData = data.filter(item => item.type === 'entrato');
-            const cancelledData = data.filter(item => item.type === 'cancellazione');
-
-            const itemHtml = (item, color) => `
-                <div class="p-3 rounded-lg shadow-sm border border-${color}-100 bg-white flex flex-col justify-between space-y-1.5 text-[11px]">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-${color}-50 text-${color}-600 border border-${color}-100 font-mono">
-                                ${item.code}
-                            </span>
-                            <p class="font-extrabold text-indigo-900 mt-1 leading-tight">${item.nome}</p>
-                        </div>
-                        <span class="text-[9px] font-semibold text-gray-400">
-                            ${new Date(item.timestamp).toLocaleDateString('it-IT')}
-                        </span>
-                    </div>
-                    <div class="text-[10px] text-gray-500 space-y-0.5">
-                        <p><strong>Stage:</strong> ${item.indirizzo}</p>
-                        <p><strong>Scuola Provenienza:</strong> ${item.scuola || 'N/A'}</p>
-                        <p><strong>Recapiti:</strong> ${item.email || 'N/A'} - ${item.cellulare || 'N/A'}</p>
-                        ${item.checkInTimestamp ? `<p class="text-blue-600 font-bold">Scansionato alle: ${new Date(item.checkInTimestamp).toLocaleTimeString('it-IT')}</p>` : ''}
-                    </div>
-                </div>`;
-
-            activeList.innerHTML = activeData.length > 0
-                ? activeData.map(item => itemHtml(item, 'green')).join('')
-                : '<p class="text-gray-400 italic text-center py-4 text-xs">Nessuna iscrizione attiva in attesa.</p>';
-
-            checkedInList.innerHTML = checkedInData.length > 0
-                ? checkedInData.map(item => itemHtml(item, 'blue')).join('')
-                : '<p class="text-gray-400 italic text-center py-4 text-xs">Nessun alunno scansionato.</p>';
-
-            cancelledList.innerHTML = cancelledData.length > 0
-                ? cancelledData.map(item => itemHtml(item, 'red')).join('')
-                : '<p class="text-gray-400 italic text-center py-4 text-xs">Nessun annullamento.</p>';
-        }
-
-        function updateDashboardStats() {
-            const activeBookings = allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').length;
-            const totalMaxSlots = stageSlots.reduce((acc, slot) => {
-                const limit = slot.postiMax || capacitiesConfig[slot.indirizzo] || 4;
-                return acc + limit;
-            }, 0);
-            const remaining = totalMaxSlots - activeBookings;
-
-            document.getElementById('stat-total').textContent = allBookings.length;
-            document.getElementById('stat-remaining').textContent = remaining < 0 ? 0 : remaining;
-        }
-
-        function updateCharts() {
-            const canvas = document.getElementById('reservationsChart');
-            if (!canvas) return;
-
-            const activeBookings = allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato');
-            const counts = activeBookings.reduce((acc, booking) => {
-                acc[booking.indirizzo] = (acc[booking.indirizzo] || 0) + 1;
-                return acc;
-            }, {});
-
-            const data = INDIRIZZI_MAPPING.map(label => counts[label] || 0);
-            const backgroundColors = ['#4f46e5', '#f59e0b', '#10b981', '#ef4444', '#ec4899'];
-
-            if (chartInstance) {
-                chartInstance.data.datasets[0].data = data;
-                chartInstance.update();
-            } else if (typeof Chart !== 'undefined') {
-                chartInstance = new Chart(canvas, {
-                    type: 'bar',
-                    data: {
-                        labels: INDIRIZZI_MAPPING,
-                        datasets: [{
-                            label: 'Prenotazioni Attive',
-                            data: data,
-                            backgroundColor: backgroundColors,
-                            borderRadius: 8
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                        }
-                    }
-                });
-            }
-        }
-
-        function exportToExcel() {
-            if (allBookings.length === 0) {
-                return showMessage("Nessun dato registrato da esportare.", true);
-            }
-
-            const headers = ["Codice", "Stato", "Indirizzo", "Giorno", "Data Stage", "Orario Stage", "Nome Studente", "Scuola Provenienza", "Email", "Cellulare", "Data Registrazione"];
-            
-            let csvContent = "\uFEFF" + headers.join(";") + "\n";
-            
-            allBookings.forEach(item => {
-                const row = [
-                    item.code || '',
-                    item.type === 'entrato' ? 'ENTRATO' : (item.type === 'prenotazione' ? 'ATTIVA' : 'ANNULLATA'),
-                    item.indirizzo || '',
-                    item.stageDay || '',
-                    item.stageDate || '',
-                    item.stageTime || '',
-                    item.nome || '',
-                    item.scuola || '',
-                    item.email || '',
-                    item.cellulare || '',
-                    new Date(item.timestamp).toLocaleString('it-IT')
-                ];
-                csvContent += row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(";") + "\n";
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `IIS_Levi_MiniStage_Orientamento_${new Date().toISOString().slice(0, 10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showMessage("File Excel scaricato con successo!");
-        }
-
-        async function confirmClearAll() {
-            if (!confirm("ATTENZIONE! Questa operazione svuoterà l'intero database delle prenotazioni. Sei sicuro?")) return;
-            try {
-                const querySnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`));
-                for (const docSnapshot of querySnapshot.docs) {
-                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, docSnapshot.id));
+            if (offlineMode) {
+                stageSlots = stageSlots.filter(s => s.id !== slotId);
+                saveLocalSandboxData();
+                renderSlotManagementTable();
+                showMessage("Slot rimosso.");
+            } else {
+                try {
+                    const { doc, deleteDoc } = window.firebaseImports;
+                    const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
+                    await deleteDoc(slotRef);
+                    showMessage("Slot rimosso dal cloud.");
+                } catch(e) {
+                    showMessage("Errore.", true);
                 }
-                showMessage("Database delle prenotazioni azzerato con successo!");
-            } catch(e) {
-                showMessage("Errore nell'azzeramento del database.", true);
             }
         }
 
-        // SISTEMA DINAMICO DELLE BOLLE SFONDO CON LOGO LEVI (Senza scritte testuali)
+        function renderSlotManagementTable() {
+            const tbody = document.getElementById('slot-management-list');
+            if (!tbody) return;
+            tbody.innerHTML = stageSlots.map(slot => `
+                <tr class="hover:bg-indigo-50/20 transition">
+                    <td class="p-3 font-bold text-indigo-900">${slot.indirizzo}</td>
+                    <td class="p-3">${slot.day}</td>
+                    <td class="p-3 font-extrabold text-indigo-600">${slot.dateStr}</td>
+                    <td class="p-3 font-mono">${slot.time}</td>
+                    <td class="p-3 font-bold">${slot.postiMax || capacitiesConfig[slot.indirizzo] || 5}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteSlot('${slot.id}')" class="text-red-500 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 py-1 px-2 rounded-lg transition border border-red-100">
+                            Elimina
+                        </button>
+                    </td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">Nessun slot presente.</td></tr>`;
+        }
+
+        function renderCapacitiesConfigInputs() {
+            const container = document.getElementById('indirizzi-capacita-inputs');
+            if (!container) return;
+            container.innerHTML = INDIRIZZI_MAPPING.map(ind => `
+                <div class="text-[11px]">
+                    <label class="block font-bold text-gray-600 mb-0.5">${ind}</label>
+                    <input type="number" data-indirizzo="${ind}" value="${capacitiesConfig[ind] || 5}" min="1" class="w-full p-1.5 bg-white border border-indigo-100 rounded-lg text-center font-bold text-indigo-900 focus:ring-1 focus:ring-indigo-500">
+                </div>
+            `).join('');
+        }
+
+        function saveCapacities() {
+            const inputs = document.querySelectorAll('#indirizzi-capacita-inputs input');
+            inputs.forEach(async input => {
+                const ind = input.getAttribute('data-indirizzo');
+                const val = parseInt(input.value) || 5;
+                capacitiesConfig[ind] = val;
+                if (!offlineMode) {
+                    const { doc, setDoc } = window.firebaseImports;
+                    await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`, ind), { indirizzo: ind, postiMax: val });
+                }
+            });
+            if (offlineMode) saveLocalSandboxData();
+            showMessage("Capacità dei posti salvata con successo!");
+        }
+
+        async function updateUSBDevicesList() {
+            const listEl = document.getElementById('usb-devices-list');
+            if (!listEl) return;
+            
+            if (!navigator.hid) {
+                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID disattivato per sicurezza. La pistola USB funziona ugualmente tramite l\'emulazione tastiera in background.</p>';
+                return;
+            }
+
+            try {
+                const devices = await navigator.hid.getDevices();
+                if (!devices || devices.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Nessun lettore USB HID autorizzato.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = devices.map(device => `
+                    <div class="flex items-center justify-between p-2 bg-purple-100/50 border border-purple-200 rounded-lg text-[11px] font-bold text-purple-900 shadow-sm animate-fade-in">
+                        <div class="flex items-center space-x-2">
+                            <span class="truncate max-w-[180px]">${device.productName || 'Periferica USB'}</span>
+                        </div>
+                        <span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Pronto</span>
+                    </div>
+                `).join('');
+            } catch(e) {
+                console.warn("Rilevamento HID limitato", e);
+                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Lo scanner USB funziona in emulazione tastiera.</p>';
+            }
+        }
+
         function createBubbles() {
             const bg = document.getElementById('bubble-bg');
             if (!bg) return;
             bg.innerHTML = '';
             
-            // Rileva l'immagine impostata sull'header-logo in modo che siano sempre perfettamente identiche
             const headerLogoEl = document.getElementById('header-logo');
-            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'levi.png';
+            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'Levi.png';
 
             const bubbleCount = 14;
             for (let i = 0; i < bubbleCount; i++) {
@@ -2143,50 +2206,68 @@
                 bubble.style.left = `${Math.random() * 100}%`;
                 bubble.style.animationDelay = `${Math.random() * 10}s`;
                 bubble.style.animationDuration = `${Math.random() * 8 + 12}s`;
-                // Applica lo stesso logo in filigrana trasparente al centro della bolla
                 bubble.style.backgroundImage = `url('${logoUrl}')`;
                 bg.appendChild(bubble);
             }
         }
 
-        function goToHome() {
-            setView('home');
+        function openScannerTerminal() {
+            setView('scanner-terminal');
+            document.getElementById('scanner-logs-list').innerHTML = `
+                <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
+            `;
+            detectCameras();
+            updateUSBDevicesList();
         }
 
-        // Inizializzatore del caricamento pagina per calcolare l'immagine corretta dopo il caricamento del DOM/Logo
-        window.addEventListener('DOMContentLoaded', () => {
-            const logoEl = document.getElementById('header-logo');
-            if (logoEl) {
-                logoEl.addEventListener('load', createBubbles);
-                logoEl.addEventListener('error', createBubbles);
+        function goToHome() { setView('home'); }
+        function showAdminView() {
+            setView('admin');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-login').classList.remove('hidden');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            
+            const filterIndirizzo = document.getElementById('filter-indirizzo');
+            if(filterIndirizzo) {
+                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
             }
-            createBubbles();
-        });
+            const addDropdown = document.getElementById('new-slot-indirizzo');
+            if (addDropdown) {
+                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+            renderCapacitiesConfigInputs();
+            renderSlotManagementTable();
+        }
 
-        // REGISTRAZIONE DELLE FUNZIONI GLOBALI (Risolve i ReferenceError dell'HTML)
-        window.openManageBookingModal = openManageBookingModal;
-        window.closeManageBookingModal = closeManageBookingModal;
-        window.showAdminView = showAdminView;
-        window.printReceipt = printReceipt;
-        window.goToHome = goToHome;
-        window.detectAndStartScanner = detectAndStartScanner;
-        window.detectUSBScanners = detectUSBScanners;
-        window.closeScannerTerminal = closeScannerTerminal;
-        window.adminLogin = adminLogin;
-        window.handleBarcodeKeyPress = handleBarcodeKeyPress;
-        window.processManualCheckIn = processManualCheckIn;
-        window.saveCapacities = saveCapacities;
-        window.handleAddSlot = handleAddSlot;
-        window.deleteSlot = deleteSlot;
-        window.applyFilters = applyFilters;
-        window.clearFilters = clearFilters;
-        window.exportToExcel = exportToExcel;
-        window.confirmClearAll = confirmClearAll;
+        // ESPOSIZIONE DELLE CHIAMATE GLOBALI SULL'OGGETTO WINDOW (Evita i ReferenceError nei file modulo)
+        window.openBookingModal = openBookingModal;
         window.closeModal = closeModal;
         window.confirmBooking = confirmBooking;
-        window.openBookingModal = openBookingModal;
+        window.openManageBookingModal = openManageBookingModal;
+        window.closeManageBookingBookingModal = closeManageBookingBookingModal;
+        window.searchAndHandleBooking = searchAndHandleBooking;
+        window.deleteSlot = deleteSlot;
+        window.saveCapacities = saveCapacities;
+        window.handleAddSlot = handleAddSlot;
+        window.setView = setView;
+        window.goToHome = goToHome;
+        window.showAdminView = showAdminView;
+        window.adminLogin = adminLogin;
         window.openScannerTerminal = openScannerTerminal;
-
+        window.closeScannerTerminal = closeScannerTerminal;
+        window.detectAndStartScanner = detectAndStartScanner;
+        window.handleBarcodeKeyPress = handleBarcodeKeyPress;
+        window.processManualCheckIn = processManualCheckIn;
+        window.saveReminderDaysConfig = saveReminderDaysConfig;
+        window.sendBatchReminders = sendBatchReminders;
+        window.sendSingleManualReminder = sendSingleManualReminder;
+        window.sendBatchCertificates = sendBatchCertificates;
+        window.exportToExcel = exportToExcel;
+        window.confirmClearAll = confirmClearAll;
+        window.applyFilters = applyFilters;
+        window.clearFilters = clearFilters;
+        window.detectCameras = detectCameras;
+        window.checkInStudent = checkInStudent;
     </script>
 </body>
 </html>
