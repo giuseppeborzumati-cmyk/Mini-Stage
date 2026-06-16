@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prenotazione Mini Stage Orientamento - IIS Primo Levi</title>
-    <!-- Caricamento di Tailwind CSS e Font Inter -->
+    <!-- Tailwind CSS per il design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF per la generazione immediata dei PDF delle ricevute -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Libreria per Scansione QR/Barcode nativa da Fotocamera -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Libreria jsPDF per la generazione immediata dei PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Libreria Chart.js per i grafici statistici dell'area docenti -->
+    <!-- Chart.js per i grafici statistici dell'area docenti -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -24,7 +24,7 @@
             position: relative;
         }
 
-        /* Sfondo animato con le bolle di sapone personalizzate con Logo levi.png */
+        /* Sfondo animato con le bolle di sapone personalizzate */
         .bubble-container {
             position: fixed;
             top: 0;
@@ -103,6 +103,12 @@
             border: 1px solid #e2e8f0;
         }
 
+        .barcode-line {
+            background-color: black;
+            height: 100%;
+            margin: 0 1px;
+        }
+
         /* Custom Scrollbar per le tabelle compatte */
         .compact-scroll::-webkit-scrollbar {
             width: 6px;
@@ -115,10 +121,13 @@
             background: rgba(129, 140, 248, 0.5);
             border-radius: 4px;
         }
+        .compact-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
 
         /* STILI SPECIFICI PER LA STAMPA */
         @media print {
-            .print-hide, header, #view-home, #view-admin, #view-scanner-terminal, .bubble-container, button {
+            .print-hide, header, #view-home, #view-admin, .bubble-container, button {
                 display: none !important; 
             }
             #view-receipt {
@@ -140,6 +149,18 @@
             }
         }
     </style>
+    
+    <!-- Importazione Firebase e Registrazione window asincrona -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        window.firebaseImports = {
+            initializeApp, getAuth, signInAnonymously, onAuthStateChanged,
+            getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc
+        };
+    </script>
 </head>
 <body class="relative">
 
@@ -148,14 +169,14 @@
 
     <div id="app" class="relative z-10 flex-grow flex flex-col items-center justify-start p-4 md:p-6 min-h-screen">
         
-        <!-- Header e barra di stato compatta con logo e indirizzo Primo Levi -->
+        <!-- Header e barra di stato con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
-                <img id="header-logo" src="levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
+                <img id="header-logo" src="Levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
                 <div>
                     <div class="flex items-center space-x-2">
                         <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
-                        <span id="conn-badge" class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Connessione in corso...</span>
+                        <span id="conn-badge" class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 animate-pulse">CONNESSIONE IN CORSO...</span>
                     </div>
                     <p class="text-[10px] font-bold text-gray-500 mt-1">Via Briantina 68, 20831, Seregno (MB)</p>
                     <p class="text-[9px] font-bold text-indigo-400 tracking-wider uppercase">Commissione Orientamento</p>
@@ -164,14 +185,14 @@
             <!-- Pulsanti in colonna impilati ordinatamente -->
             <div class="flex flex-col gap-1.5 w-full sm:w-auto">
                 <div class="flex flex-row gap-2 w-full">
-                    <button onclick="openManageBookingModal('retrieve')" class="flex-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                    <button onclick="window.openManageBookingModal('retrieve')" class="flex-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
                         Recupera Prenotazione
                     </button>
-                    <button onclick="openManageBookingModal('cancel')" class="flex-1 text-[11px] font-bold bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                    <button onclick="window.openManageBookingModal('cancel')" class="flex-1 text-[11px] font-bold bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg shadow-sm transition">
                         Cancella Prenotazione
                     </button>
                 </div>
-                <button onclick="showAdminView()" class="w-full text-[11px] font-bold bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg shadow-sm transition text-center uppercase tracking-wide">
+                <button onclick="window.showAdminView()" class="w-full text-[11px] font-bold bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg shadow-sm transition text-center uppercase tracking-wide">
                     Accesso Commissione Orientamento
                 </button>
             </div>
@@ -205,6 +226,7 @@
                 </div>
             </div>
 
+            <!-- SEZIONE TABELLE COMPATTE IN GRIGLIA SIMULTANEA -->
             <div class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
@@ -274,7 +296,7 @@
             <!-- Footer compatto -->
             <footer class="w-full flex justify-between items-center py-3 border-t border-indigo-100/50 text-[10px] text-gray-400">
                 <p>&copy; Commissione Orientamento Primo Levi - Seregno</p>
-                <p>Scansione Digitale Integrata</p>
+                <p>Sistema Convalida Digitale</p>
             </footer>
         </div>
         
@@ -296,13 +318,13 @@
                 
                 <!-- Codice a Barre in Stile CSS -->
                 <div class="w-full flex flex-col items-center">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Scansione Barcode Accettazione</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Codice a Barre Accoglienza</p>
                     <div class="barcode-container w-64" id="receipt-barcode"></div>
                 </div>
 
-                <!-- QR Code Reale per una scansione ultra affidabile tramite fotocamera -->
+                <!-- QR Code Reale per una scansione tramite smartphone -->
                 <div class="flex flex-col items-center py-2">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">QR-Code Scanner</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">QR-Code Registrazione</p>
                     <img id="receipt-qr" src="" alt="QR Code" class="w-32 h-32 border border-gray-100 p-1.5 rounded-lg bg-white shadow-sm">
                 </div>
 
@@ -321,71 +343,12 @@
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full pt-2 print-hide">
                     <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m-5.88-5.88l-2.12 2.12M12 8.75V15M10 11.5h4"></path></svg>
                         Stampa o Salva PDF
                     </button>
-                    <button onclick="goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
+                    <button onclick="window.goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
                         Torna alla Home
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- VISTA TERMINALE SCANNER BARCODE/QR DEDICATA -->
-        <div id="view-scanner-terminal" class="w-full max-w-4xl bg-white p-6 rounded-2xl shadow-2xl space-y-6 hidden print-hide">
-            <div class="flex justify-between items-center border-b pb-3 border-gray-100">
-                <div>
-                    <h2 class="text-xl font-black text-indigo-900">Terminale di Scansione Accoglienza</h2>
-                    <p class="text-xs text-gray-500">Inquadra il QR o connetti un lettore USB per marcare i presenti.</p>
-                </div>
-                <button onclick="closeScannerTerminal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-4 rounded-xl text-xs transition">
-                    Esci dal Terminale
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Sezione Video Scanner -->
-                <div class="space-y-4">
-                    <!-- FASE 1: Rilevamento Apparecchio Webcam -->
-                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
-                        <div class="space-y-1">
-                            <span class="bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Webcam</span>
-                            <h3 class="text-xs font-bold text-gray-800">Usa la fotocamera del dispositivo</h3>
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <select id="scanner-camera-select" class="p-2.5 bg-white border border-indigo-200 rounded-xl text-xs flex-grow font-bold text-indigo-900">
-                                <option value="">Rilevamento in corso...</option>
-                            </select>
-                            <button onclick="detectAndStartScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition whitespace-nowrap shadow-md">
-                                Avvia Webcam
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- FASE 2: Informazioni lettore USB Hardware -->
-                    <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-100 space-y-2">
-                        <span class="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Lettori USB / HID</span>
-                        <h3 class="text-xs font-bold text-gray-800">Intercettazione Automatica Attiva</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed">
-                            I lettori USB emulano una tastiera. Spara direttamente sul barcode in qualsiasi momento con il lettore e il sistema convaliderà l'ingresso automaticamente.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Sezione Visualizzazione Webcam -->
-                <div class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-100 bg-gray-50 rounded-xl p-4 min-h-[250px] relative">
-                    <div id="scanner-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
-                    <div id="scanner-idle-placeholder" class="text-center space-y-2 p-6">
-                        <p class="text-xs font-bold text-indigo-900">Fotocamera non avviata.</p>
-                        <p class="text-[10px] text-gray-400">Clicca su "Avvia Webcam" per attivare la scansione QR.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Log delle Scansioni correnti -->
-            <div class="flex flex-col h-[180px] glass-card p-4">
-                <h4 class="text-xs font-black text-indigo-800 uppercase tracking-widest mb-2 border-b pb-1">Scansioni Rilevate nella Sessione</h4>
-                <div id="scanner-logs-list" class="overflow-y-auto flex-grow compact-scroll space-y-2 text-xs">
-                    <p class="text-gray-400 italic text-[11px] text-center mt-8">Nessun codice scansionato.</p>
                 </div>
             </div>
         </div>
@@ -397,10 +360,10 @@
                 <h1 class="text-xl font-black text-red-700">Area Riservata Docenti</h1>
                 <p class="text-xs text-gray-500">Inserisci la chiave d'accesso docente</p>
                 <input id="admin-password" type="password" placeholder="Password Docente" class="w-full p-3 border border-red-100 rounded-xl text-center focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-inner">
-                <button onclick="adminLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-md text-sm">
+                <button onclick="window.adminLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-md text-sm">
                     Entra nella Dashboard
                 </button>
-                <button onclick="goToHome()" class="text-xs text-gray-400 hover:text-indigo-600 font-bold block mx-auto transition">
+                <button onclick="window.goToHome()" class="text-xs text-gray-400 hover:text-indigo-600 font-bold block mx-auto transition">
                     Torna alla Home
                 </button>
             </div>
@@ -413,28 +376,28 @@
                         <p class="text-xs text-gray-500">Controlla le prenotazioni, invia i promemoria e distribuisci gli attestati.</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="openScannerTerminal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs flex items-center">
-                            Apri Terminale Scansione
+                        <button onclick="window.openScannerTerminal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
+                            Apri Scanner Accoglienza
                         </button>
-                        <button onclick="goToHome()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
+                        <button onclick="window.goToHome()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
                             Torna alla Home
                         </button>
                     </div>
                 </div>
 
-                <!-- PUNTO ACCETTAZIONE BARCODE CON SCANNER USB -->
+                <!-- PUNTO ACCETTAZIONE MANUALE -->
                 <div class="glass-card p-5 border-l-4 border-indigo-600 bg-gradient-to-r from-indigo-50/20 to-white/90">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div class="space-y-1">
                             <h3 class="text-md font-black text-indigo-900 flex items-center">
-                                Accettazione Rapida USB Barcode / Scrittura Manuale
+                                Accettazione Rapida / Registrazione Presenza
                             </h3>
-                            <p class="text-xs text-gray-500">Scansiona o inserisci manualmente il codice per marcare lo studente come ENTRATO.</p>
+                            <p class="text-xs text-gray-500">Inserisci il codice prenotazione o usa uno scanner barcode collegato (emulatore di tastiera).</p>
                         </div>
                         <div class="w-full md:w-auto flex items-center space-x-2">
-                            <input id="barcode-scan-input" type="text" placeholder="Scrivi codice o usa USB..." class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="handleBarcodeKeyPress(event)">
-                            <button onclick="processManualCheckIn()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition">
-                                Verifica
+                            <input id="barcode-scan-input" type="text" placeholder="Es. MS-123456" class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="window.handleBarcodeKeyPress(event)">
+                            <button onclick="window.processManualCheckIn()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition">
+                                Valida Presenza
                             </button>
                         </div>
                     </div>
@@ -448,22 +411,22 @@
                             Configurazione & Invio Promemoria
                         </h3>
                         <p class="text-xs text-gray-600">
-                            Imposta i giorni di anticipo per l'invio del promemoria automatico.
+                            Invia una e-mail di promemoria a tutti gli studenti iscritti prima della data dello stage.
                         </p>
                         <div class="flex flex-col sm:flex-row items-center gap-3">
                             <div class="w-full sm:w-auto flex items-center space-x-2">
                                 <span class="text-xs font-bold text-gray-700 whitespace-nowrap">Giorni di anticipo:</span>
                                 <input id="reminder-days-input" type="number" min="1" max="15" value="7" class="w-20 p-2.5 bg-white border border-purple-200 rounded-xl text-center font-black text-purple-950 focus:ring-1 focus:ring-purple-500">
                             </div>
-                            <button onclick="saveReminderDaysConfig()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md">
-                                Salva Anticipo
+                            <button onclick="window.saveReminderDaysConfig()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md">
+                                Salva Configurazione
                             </button>
                         </div>
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-purple-100 pt-3 gap-3">
                             <div>
                                 <p id="reminder-eligibility-count" class="text-xs font-bold text-indigo-950">Calcolo idoneità...</p>
                             </div>
-                            <button id="btn-batch-reminders" onclick="sendBatchReminders()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                            <button id="btn-batch-reminders" onclick="window.sendBatchReminders()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
                                 Invia Promemoria a Tutti gli Idonei
                             </button>
                         </div>
@@ -474,7 +437,7 @@
                         <p class="text-[11px] text-gray-500">Invia mail inserendo direttamente il codice prenotazione:</p>
                         <div class="space-y-2 mt-2">
                             <input id="input-manual-reminder-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-xl text-xs text-center font-mono font-bold uppercase focus:ring-1 focus:ring-indigo-500">
-                            <button onclick="sendSingleManualReminder()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
+                            <button onclick="window.sendSingleManualReminder()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
                                 Invia Mail Promemoria
                             </button>
                         </div>
@@ -493,7 +456,7 @@
                         <div>
                             <p id="certificate-eligibility-count" class="text-xs font-bold text-green-950">Calcolo idoneità attestati...</p>
                         </div>
-                        <button id="btn-batch-certificates" onclick="sendBatchCertificates()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                        <button id="btn-batch-certificates" onclick="window.sendBatchCertificates()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
                             Invia Attestati in Blocco a Tutti gli Entrati
                         </button>
                     </div>
@@ -505,7 +468,7 @@
                         <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Impostazione Posti (Capacità)</h3>
                         <p class="text-[11px] text-gray-500">Modifica la capacità massima degli studenti iscritti contemporaneamente:</p>
                         <div id="indirizzi-capacita-inputs" class="space-y-2"></div>
-                        <button onclick="saveCapacities()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-sm">
+                        <button onclick="window.saveCapacities()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-sm">
                             Salva Impostazioni Posti
                         </button>
                     </div>
@@ -513,7 +476,7 @@
                     <!-- Configuratore Aggiunta Slot -->
                     <div class="glass-card p-5 lg:col-span-2 space-y-3">
                         <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Aggiungi Nuovo Slot Stage</h3>
-                        <form id="add-slot-form" onsubmit="handleAddSlot(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <form id="add-slot-form" onsubmit="window.handleAddSlot(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div class="sm:col-span-2">
                                 <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Indirizzo Stage</label>
                                 <select id="new-slot-indirizzo" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs" required></select>
@@ -570,20 +533,20 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                             <div>
                                 <label class="block font-bold text-gray-500 mb-0.5">Indirizzo</label>
-                                <select id="filter-indirizzo" onchange="applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50"></select>
+                                <select id="filter-indirizzo" onchange="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50"></select>
                             </div>
                             <div>
                                 <label class="block font-bold text-gray-500 mb-0.5">Stato Presenza</label>
-                                <select id="filter-type" onchange="applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50">
+                                <select id="filter-type" onchange="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50">
                                     <option value="">Tutti</option>
-                                    <option value="prenotazione">Attive (Non Scansionati)</option>
+                                    <option value="prenotazione">Attive (In Attesa)</option>
                                     <option value="entrato">Entrati (Presenza Verificata)</option>
                                     <option value="cancellazione">Cancellate</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block font-bold text-gray-500 mb-0.5">Data</label>
-                                <input id="filter-date" type="text" placeholder="Es. 3/11" oninput="applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50 text-center">
+                                <input id="filter-date" type="text" placeholder="Es. 3/11" oninput="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50 text-center">
                             </div>
                         </div>
                     </div>
@@ -594,10 +557,10 @@
                             <p id="stat-total" class="text-3xl font-black text-indigo-800">0</p>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="exportToExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition text-[10px] shadow-sm">
+                            <button onclick="window.exportToExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition text-[10px] shadow-sm">
                                 Esporta Elenco (.csv)
                             </button>
-                            <button onclick="confirmClearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg transition text-[10px] border border-red-100">
+                            <button onclick="window.confirmClearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg transition text-[10px] border border-red-100">
                                 Svuota Database
                             </button>
                         </div>
@@ -619,7 +582,7 @@
                         <h3 class="text-xs font-black text-green-800 mb-1 flex items-center">
                             Iscritti in Attesa
                         </h3>
-                        <p class="text-[10px] text-gray-500 mb-3">Registrati non ancora scansionati all'ingresso.</p>
+                        <p class="text-[10px] text-gray-500 mb-3">Registrati non ancora entrati.</p>
                         <div id="list-active-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
                     </div>
 
@@ -647,6 +610,54 @@
 
     </div>
 
+    <!-- TERMINALE DI SCANSIONE WEBCAM (Area Accoglienza) -->
+    <div id="view-scanner-terminal" class="w-full max-w-4xl hidden space-y-6 mx-auto glass-card p-6 mt-6">
+        <div class="flex justify-between items-center border-b pb-3 border-gray-100">
+            <div>
+                <h2 class="text-xl font-black text-indigo-900">Terminale di Scansione Accoglienza</h2>
+                <p class="text-xs text-gray-500">Inquadra il QR Code dello studente con la webcam.</p>
+            </div>
+            <button onclick="window.closeScannerTerminal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-4 rounded-xl text-xs transition">
+                Chiudi Terminale
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+                    <div class="space-y-1">
+                        <span class="bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Webcam</span>
+                        <h3 class="text-xs font-bold text-gray-800">Seleziona e Rileva la Telecamera</h3>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <select id="scanner-camera-select" class="p-2.5 bg-white border border-indigo-200 rounded-xl text-xs flex-grow font-bold text-indigo-900">
+                            <option value="">Rilevamento in corso...</option>
+                        </select>
+                        <button onclick="window.detectAndStartScanner()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition whitespace-nowrap shadow-md">
+                            Avvia Fotocamera
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box di anteprima webcam -->
+            <div class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-100 bg-gray-50 rounded-xl p-4 min-h-[250px] relative">
+                <div id="scanner-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
+                <div id="scanner-idle-placeholder" class="text-center space-y-2 p-6">
+                    <p class="text-xs font-bold text-indigo-900">Nessun segnale video.</p>
+                    <p class="text-[10px] text-gray-400">Clicca su Avvia Fotocamera per attivare lo scanner.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col h-[180px] glass-card p-4">
+            <h4 class="text-xs font-black text-indigo-800 uppercase tracking-widest mb-2 border-b pb-1">Cronologia Scansioni Correnti</h4>
+            <div id="scanner-logs-list" class="overflow-y-auto flex-grow compact-scroll space-y-2">
+                <p class="text-gray-400 italic text-[11px] text-center mt-6">In attesa di letture...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL GESTIONE PRENOTAZIONE (ANNULLA / RECUPERA) -->
     <div id="manage-booking-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-indigo-50">
@@ -671,10 +682,10 @@
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeManageBookingBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
+                <button onclick="window.closeManageBookingBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
                     Chiudi
                 </button>
-                <button id="btn-submit-action" class="text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md"></button>
+                <button id="btn-submit-action" onclick="window.searchAndHandleBooking()" class="text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md"></button>
             </div>
         </div>
     </div>
@@ -699,10 +710,10 @@
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
-                <button onclick="closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
+                <button onclick="window.closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
                     Annulla
                 </button>
-                <button onclick="confirmBooking()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md">
+                <button onclick="window.confirmBooking()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md">
                     Conferma Iscrizione
                 </button>
             </div>
@@ -711,18 +722,34 @@
 
     <!-- Script del modulo principale dell'applicazione -->
     <script type="module">
-        // Costanti globali
+        const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, updateDoc } = window.firebaseImports;
+
         const ADMIN_PASSWORD = 'orientamento2025'; 
         const COLLECTION_PRENOTAZIONI = 'prenotazioni_v2'; 
         const COLLECTION_IMPOSTAZIONI = 'impostazioni_stage';
         const COLLECTION_CONFIG_CAPACITA = 'config_capacita';
         const COLLECTION_CONFIG_PROMEMORIA = 'config_promemoria';
         
-        // Google Apps Script Deployments mantenuti e protetti
+        // Link Google Apps Script
         const EMAIL_SCRIPT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec';
         const CANCELLATION_SCRIPT_URL = 'https://script.google.com/macros/s/AKfwcbw1C_uoalaFlcidMvhqz9zMxSXwqj1nVMo7bv3IGYbHis0aum-qoEzpA-Z2PDacgXYLbg/exec';
         const REMINDER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytiWMb5UgZrpymmzrPR5VPwbtbcGBmDyPsp7EfC3ShGk_pXl_4Zp6630eTF7cPPbOUJQ/exec';
         const CERTIFICATE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0IExcsXnFcwCYnT-IaVHHXn0FNoZQzd9YZvJyqL9cJZ4Hsp8xjHpV1XIlwrAQ63zlRQ/exec';
+
+        // Configurazione Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRgKN3N16EGLZ2JZXMQPxJJRpq_KIwWbw",
+            authDomain: "ministage-2eea5.firebaseapp.com",
+            projectId: "ministage-2eea5",
+            storageBucket: "ministage-2eea5.firebasestorage.app",
+            messagingSenderId: "593206732421",
+            appId: "1:593206732421:web:ff7874d55250ac5d7aebec",
+            measurementId: "G-YQVGCYB4WJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ClJzJkLPS6LWHAzKjLQe';
 
@@ -742,10 +769,8 @@
             "Sistema Moda": "container-moda"
         };
 
-        // Stati applicativi
-        let db, auth, userId = null;
+        let userId = null;
         let isAuthReady = false;
-        let offlineMode = false;
 
         let allBookings = []; 
         let stageSlots = [];  
@@ -753,39 +778,56 @@
         let capacitiesConfig = {}; 
         let reminderDaysConfig = 7; 
         let chartInstance = null;
-        let html5QrScanner = null;
+        let manageActionType = 'retrieve';
+        let html5QrScanner = null; // Aggiunto per lo scanner
 
-        // Default Seeding slots se vuoto
-        const MOCK_SLOTS_SEED = [
-            { id: "LICEO-1", indirizzo: "Liceo Scientifico - Scienze Applicate", day: "Lunedì", dateStr: "23/11", time: "09:00 - 11:00", postiMax: 5 },
-            { id: "LICEO-2", indirizzo: "Liceo Scientifico - Scienze Applicate", day: "Giovedì", dateStr: "26/11", time: "11:00 - 13:00", postiMax: 5 },
-            { id: "RIM-1", indirizzo: "Relazioni Internazionali per il Marketing (RIM)", day: "Martedì", dateStr: "24/11", time: "09:00 - 11:00", postiMax: 4 },
-            { id: "RIM-2", indirizzo: "Relazioni Internazionali per il Marketing (RIM)", day: "Venerdì", dateStr: "27/11", time: "11:00 - 13:00", postiMax: 4 },
-            { id: "LOG-1", indirizzo: "Logistica - Quadriennale", day: "Mercoledì", dateStr: "25/11", time: "09:00 - 11:00", postiMax: 5 },
-            { id: "CAT-1", indirizzo: "Costruzione Ambiente e Territorio (CAT)", day: "Giovedì", dateStr: "26/11", time: "09:00 - 11:00", postiMax: 4 },
-            { id: "MODA-1", indirizzo: "Sistema Moda", day: "Venerdì", dateStr: "27/11", time: "09:00 - 11:00", postiMax: 6 }
-        ];
+        // Esposizione funzioni per l'interfaccia
+        window.goToHome = function() {
+            window.setView('home');
+        };
 
-        // --- INIZIALIZZAZIONE ---
-        window.addEventListener('DOMContentLoaded', async () => {
-            updateStatusText("Avvio connessione...");
-            setupFallbackMechanisms();
+        window.createBubbles = function() {
+            const bg = document.getElementById('bubble-bg');
+            if (!bg) return;
+            bg.innerHTML = '';
             
-            // Controllo difensivo per verificare la presenza delle librerie Firebase
-            if (!window.firebaseImports) {
-                console.warn("Librerie Firebase non rilevate. Attivazione immediata Sandbox Locale.");
-                activateOfflineMode();
-            } else {
-                await startFirebaseIntegration();
+            const headerLogoEl = document.getElementById('header-logo');
+            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'Levi.png';
+
+            for (let i = 0; i < 14; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 75 + 45; 
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 100}%`;
+                bubble.style.animationDelay = `${Math.random() * 10}s`;
+                bubble.style.animationDuration = `${Math.random() * 8 + 12}s`;
+                bubble.style.backgroundImage = `url('${logoUrl}')`;
+                bg.appendChild(bubble);
             }
-            
-            setupBarcodeScannerGlobalInterceptor();
-            createBubbles();
-        });
+        };
 
-        // Definizione e implementazione della funzione di cambio vista per evitare ReferenceError
-        function setView(viewName, data = null) {
-            const views = ['view-home', 'view-receipt', 'view-scanner-terminal', 'view-admin'];
+        window.showAdminView = function() {
+            window.setView('admin');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-login').classList.remove('hidden');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            
+            const filterIndirizzo = document.getElementById('filter-indirizzo');
+            if(filterIndirizzo) {
+                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+            const addDropdown = document.getElementById('new-slot-indirizzo');
+            if (addDropdown) {
+                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+            window.renderCapacitiesConfigInputs();
+            window.renderSlotManagementTable();
+        };
+
+        window.setView = function(viewName, data = null) {
+            const views = ['view-home', 'view-receipt', 'view-admin', 'view-scanner-terminal'];
             views.forEach(v => {
                 const el = document.getElementById(v);
                 if (el) el.classList.add('hidden');
@@ -795,12 +837,11 @@
             if (activeView) activeView.classList.remove('hidden');
 
             if (viewName === 'receipt' && data) {
-                updateReceiptView(data);
+                window.updateReceiptView(data);
             }
-        }
+        };
 
-        // Definizione della funzione per visualizzare popup di stato temporanei
-        function showMessage(msg, isError = false) {
+        window.showMessage = function(msg, isError = false) {
             const msgBox = document.getElementById('message-box');
             if (!msgBox) return;
             msgBox.textContent = msg;
@@ -814,135 +855,39 @@
             setTimeout(() => {
                 msgBox.classList.add('hidden');
             }, 4000);
-        }
+        };
 
-        // Definizione della funzione di rilevamento delle webcam collegate
-        function detectCameras() {
-            const select = document.getElementById('scanner-camera-select');
-            if (!select) return;
-            select.innerHTML = '<option value="">Rilevamento in corso...</option>';
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length > 0) {
-                    select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Webcam ' + d.id}</option>`).join('');
-                } else {
-                    select.innerHTML = '<option value="">Nessuna fotocamera trovata</option>';
-                }
-            }).catch(err => {
-                console.error("Errore rilevamento webcam:", err);
-                select.innerHTML = '<option value="">Errore di accesso alla webcam</option>';
-            });
-        }
-
-        function updateStatusText(txt, isError = false) {
+        window.updateStatusText = function(txt, isError = false) {
             const badge = document.getElementById('conn-badge');
             if(!badge) return;
             badge.textContent = txt;
             if(isError) {
                 badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 animate-pulse";
-            } else if (offlineMode) {
-                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800";
             } else {
-                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-100 text-green-800";
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-100 text-green-800 animate-pulse";
             }
-        }
+        };
 
-        function updateStatus(connected) {
-            updateStatusText(connected ? "Connesso al Database" : "Errore Connessione", !connected);
-        }
-        window.updateStatus = updateStatus;
-
-        function setupFallbackMechanisms() {
-            setTimeout(() => {
-                if(!isAuthReady) {
-                    console.warn("Sincronizzazione DB lenta. Abilitazione immediata Sandbox Locale.");
-                    activateOfflineMode();
+        window.startFirebaseIntegration = async function() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    window.updateStatusText("SISTEMA CONNESSO");
+                    await window.verifyAndSeedDB();
+                    window.setupSnapshotListeners();
+                } else {
+                    window.updateStatusText("CONNESSIONE IN CORSO...");
+                    await signInAnonymously(auth).catch(err => {
+                        console.error("Errore autenticazione Firebase:", err);
+                        window.updateStatusText("ERRORE CONNESSIONE", true);
+                    });
                 }
-            }, 3000);
-        }
-
-        async function startFirebaseIntegration() {
-            try {
-                const { initializeApp, getAuth, signInAnonymously, getFirestore, collection, getDocs, onSnapshot } = window.firebaseImports;
-                const firebaseConfig = {
-                    apiKey: "AIzaSyAP-Bmf02SZp4o6K2z2B1GgIlUJ3Wuc8Zk",
-                    authDomain: "progetto-63fb3.firebaseapp.com",
-                    projectId: "progetto-63fb3",
-                    storageBucket: "progetto-63fb3.firebasestorage.app",
-                    messagingSenderId: "883088850197",
-                    appId: "1:883088850197:web:29b8573ea43555041b3d1c"
-                };
-
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                await signInAnonymously(auth);
-                userId = auth.currentUser?.uid || "anon-user";
-                offlineMode = false;
-                isAuthReady = true;
-                updateStatusText("Connesso al Database");
-                
-                await verifyAndSeedDB();
-                setupSnapshotListeners();
-            } catch(e) {
-                console.warn("Impossibile connettersi al cloud. Attivazione Sandbox locale.", e);
-                activateOfflineMode();
-            }
-        }
-
-        function activateOfflineMode() {
-            offlineMode = true;
-            isAuthReady = true;
-            userId = "local-sandbox-user";
-            updateStatusText("Sandbox Offline (Local Storage)", false);
-            loadLocalSandboxData();
-            hideLoader();
-            setView('home');
-        }
-
-        function hideLoader() {
-            const spinner = document.getElementById('loading-spinner');
-            if (spinner) spinner.classList.add('hidden');
-        }
-
-        function loadLocalSandboxData() {
-            const storedSlots = localStorage.getItem('levi_slots');
-            stageSlots = storedSlots ? JSON.parse(storedSlots) : [...MOCK_SLOTS_SEED];
-
-            const storedBookings = localStorage.getItem('levi_bookings');
-            allBookings = storedBookings ? JSON.parse(storedBookings) : [];
-
-            capacitiesConfig = {
-                "Liceo Scientifico - Scienze Applicate": 5,
-                "Relazioni Internazionali per il Marketing (RIM)": 4,
-                "Logistica - Quadriennale": 5,
-                "Costruzione Ambiente e Territorio (CAT)": 4,
-                "Sistema Moda": 6
-            };
-            
-            reminderDaysConfig = parseInt(localStorage.getItem('levi_reminder_days') || "7");
-            rebuildBookingsMap();
-        }
-
-        function saveLocalSandboxData() {
-            localStorage.setItem('levi_slots', JSON.stringify(stageSlots));
-            localStorage.setItem('levi_bookings', JSON.stringify(allBookings));
-            localStorage.setItem('levi_reminder_days', reminderDaysConfig.toString());
-            rebuildBookingsMap();
-            renderStages();
-        }
-
-        function rebuildBookingsMap() {
-            const counts = {};
-            allBookings.forEach(b => {
-                if (b.type === 'prenotazione') { counts[b.slotId] = (counts[b.slotId] || 0) + 1; }
             });
-            bookingsMap = counts;
-        }
+        };
 
-        async function verifyAndSeedDB() {
+        window.verifyAndSeedDB = async function() {
             try {
-                const { collection, getDocs, doc, setDoc } = window.firebaseImports;
                 const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
                 const capSnap = await getDocs(capRef);
                 if (capSnap.empty) {
@@ -950,50 +895,39 @@
                         await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 5 });
                     }
                 }
-
-                const slotsRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`);
-                const slotsSnap = await getDocs(slotsRef);
-                if (slotsSnap.empty) {
-                    for (const s of MOCK_SLOTS_SEED) {
-                        await setDoc(doc(slotsRef, s.id), s);
-                    }
-                }
+                // ATTENZIONE: La logica che aggiungeva MOCK_SLOTS_SEED in automatico è stata rimossa,
+                // così i calendari eliminati non torneranno mai più in automatico da soli.
             } catch(e) {
-                console.error("Errore verifica database:", e);
+                console.error("Errore verifica seeding database:", e);
             }
-        }
+        };
 
-        function setupSnapshotListeners() {
-            const { collection, onSnapshot, doc } = window.firebaseImports;
-            // Capacità Posti
+        window.setupSnapshotListeners = function() {
             onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`), (snap) => {
                 const caps = {};
                 snap.forEach(d => { caps[d.data().indirizzo] = d.data().postiMax; });
                 capacitiesConfig = caps;
-                renderStages();
-                renderCapacitiesConfigInputs();
+                window.renderStages();
+                window.renderCapacitiesConfigInputs();
             });
 
-            // Config Promemoria
             onSnapshot(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`), (snap) => {
                 if (snap.exists()) {
                     reminderDaysConfig = snap.data().daysBefore || 7;
                     const el = document.getElementById('reminder-days-input');
                     if (el) el.value = reminderDaysConfig;
-                    calculateReminderEligibility();
+                    window.calculateReminderEligibility();
                 }
             });
 
-            // Calendario Slots
             onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`), (snap) => {
                 const list = [];
                 snap.forEach(d => list.push(d.data()));
                 stageSlots = list;
-                renderStages();
-                renderSlotManagementTable();
+                window.renderStages();
+                window.renderSlotManagementTable();
             });
 
-            // Prenotazioni
             onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`), (snap) => {
                 const list = [];
                 const bMap = {};
@@ -1007,15 +941,17 @@
                 allBookings = list.sort((a, b) => b.timestamp - a.timestamp);
                 bookingsMap = bMap;
                 
-                hideLoader();
-                setView('home');
-                calculateReminderEligibility();
-                calculateCertificateEligibility();
-                applyFilters(); 
+                const spinner = document.getElementById('loading-spinner');
+                if (spinner) spinner.classList.add('hidden');
+                window.setView('home');
+                
+                window.calculateReminderEligibility();
+                window.calculateCertificateEligibility();
+                window.applyFilters(); 
             });
-        }
+        };
 
-        function renderStages() {
+        window.renderStages = function() {
             INDIRIZZI_MAPPING.forEach(ind => {
                 const containerId = CONTAINER_MAPPING[ind];
                 const container = document.getElementById(containerId);
@@ -1053,7 +989,7 @@
                     const isFull = remaining <= 0;
                     const actionButton = isFull 
                         ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed">Completo</span>`
-                        : `<button onclick="openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md">Prenota</button>`;
+                        : `<button onclick="window.openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md font-sans">Prenota</button>`;
 
                     return `
                         <div class="p-3 bg-white border ${rowBorderColor} rounded-xl shadow-sm flex flex-col justify-between space-y-2">
@@ -1080,9 +1016,9 @@
                     `;
                 }).join('');
             });
-        }
+        };
 
-        function openBookingModal(slotId, indirizzo, day, dateStr, time) {
+        window.openBookingModal = function(slotId, indirizzo, day, dateStr, time) {
             document.getElementById('modal-slot-id').value = slotId;
             document.getElementById('modal-indirizzo').value = indirizzo;
             document.getElementById('modal-stage-day').value = day;
@@ -1094,22 +1030,21 @@
                 <strong class="text-indigo-900">Data & Ora:</strong> ${day} ${dateStr} alle ${time}
             `;
             document.getElementById('booking-modal').classList.remove('hidden');
-        }
+        };
 
-        function closeModal() {
+        window.closeModal = function() {
             document.getElementById('booking-modal').classList.add('hidden');
-            clearModalInputs();
-        }
+            window.clearModalInputs();
+        };
 
-        function clearModalInputs() {
+        window.clearModalInputs = function() {
             document.getElementById('modal-nome').value = '';
             document.getElementById('modal-scuola').value = '';
             document.getElementById('modal-email').value = '';
             document.getElementById('modal-cellulare').value = '';
-        }
+        };
 
-        // CONFERMA PRENOTAZIONE CON SUPPORTO EMAIL AUTOMATICA E PDF
-        async function confirmBooking() {
+        window.confirmBooking = async function() {
             const slotId = document.getElementById('modal-slot-id').value;
             const indirizzo = document.getElementById('modal-indirizzo').value;
             const stageDay = document.getElementById('modal-stage-day').value;
@@ -1117,15 +1052,15 @@
             const stageTime = document.getElementById('modal-stage-time').value;
 
             const nome = document.getElementById('modal-nome').value.trim();
-            const scuola = document.getElementById('modal-scuola').value.trim();
+            const escuela = document.getElementById('modal-scuola').value.trim();
             const email = document.getElementById('modal-email').value.trim();
             const cellulare = document.getElementById('modal-cellulare').value.trim();
 
-            if (!nome || !scuola || !email || !cellulare) {
-                return showMessage("Tutti i campi sono obbligatori.", true);
+            if (!nome || !escuela || !email || !cellulare) {
+                return window.showMessage("Tutti i campi sono obbligatori.", true);
             }
             
-            closeModal();
+            window.closeModal();
             const code = "MS-" + Math.floor(100000 + Math.random() * 900000);
             
             const reservationData = {
@@ -1137,45 +1072,28 @@
                 stageDate: stageDate,
                 stageTime: stageTime,
                 nome: nome,
-                scuola: scuola,
+                scuola: escuela,
                 email: email,
                 cellulare: cellulare,
-                userId: userId,
                 timestamp: Date.now(),
                 reminderSent: false,
                 certificateSent: false
             };
 
-            // Cambia vista istantaneamente
-            setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
-            showMessage("Prenotazione registrata con successo!");
+            window.setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
+            window.showMessage("Prenotazione registrata con successo!");
 
-            if (offlineMode) {
-                allBookings.unshift(reservationData);
-                saveLocalSandboxData();
-                setTimeout(() => {
-                    const statusEl = document.getElementById('email-sending-status');
-                    if (statusEl) {
-                        statusEl.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
-                        statusEl.innerHTML = `<span>Sandbox locale: Ricevuta emessa con successo offline!</span>`;
-                    }
-                }, 1000);
-            } else {
-                try {
-                    const { doc, setDoc } = window.firebaseImports;
-                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
-                    await setDoc(docRef, reservationData);
-                    
-                    // Invio immediato asincrono e non bloccante della notifica email con PDF
-                    sendAutomaticEmailNotification(reservationData, false);
-                } catch(e) {
-                    console.error("Errore salvataggio DB:", e);
-                    showMessage("Registrata solo localmente.", true);
-                }
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                await setDoc(docRef, reservationData);
+                window.sendAutomaticEmailNotification(reservationData, false);
+            } catch(e) {
+                console.error("Errore salvataggio database cloud:", e);
+                window.showMessage("Errore salvataggio. Riprova più tardi.", true);
             }
-        }
+        };
 
-        function createBarcodeDataURL(text) {
+        window.createBarcodeDataURL = function(text) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 300;
@@ -1205,10 +1123,9 @@
             ctx.textAlign = 'center';
             ctx.fillText(text, 150, 78);
             return canvas.toDataURL();
-        }
+        };
 
-        // Disegna un codice a barre all'interno di un PDF generato dinamicamente
-        function drawBarcodeInPDF(pdfDoc, text, startX, startY) {
+        window.drawBarcodeInPDF = function(pdfDoc, text, startX, startY) {
             pdfDoc.setFillColor(0, 0, 0);
             let currentX = startX;
             for (let i = 0; i < text.length; i++) {
@@ -1224,9 +1141,9 @@
             pdfDoc.setFontSize(8);
             pdfDoc.setTextColor(100, 100, 100);
             pdfDoc.text(text, startX + 15, startY + 18);
-        }
+        };
 
-        function updateReceiptView(data) {
+        window.updateReceiptView = function(data) {
             const rTitle = document.getElementById('receipt-title');
             const rCode = document.getElementById('receipt-code');
             const rMsg = document.getElementById('receipt-message');
@@ -1247,14 +1164,10 @@
                 rBarcode.classList.remove('opacity-30');
             }
 
-            // Generazione Barcode Locale Canvas
-            const bcodeUrl = createBarcodeDataURL(data.code);
+            const bcodeUrl = window.createBarcodeDataURL(data.code);
             rBarcode.innerHTML = `<img src="${bcodeUrl}" alt="Barcode Scansione" class="h-12 object-contain">`;
-
-            // QR Code
             rQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.code)}`;
 
-            // Dettagli
             rDetails.innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 border-t pt-2.5 text-xs">
                     <div><span class="text-gray-400 font-medium">Studente:</span> <strong class="text-indigo-950">${data.data.nome}</strong></div>
@@ -1265,9 +1178,9 @@
                     <div><span class="text-gray-400 font-medium">Email Registrata:</span> <strong class="text-indigo-950">${data.data.email}</strong></div>
                 </div>
             `;
-        }
+        };
 
-        async function sendAutomaticEmailNotification(res, isRetrieval = false) {
+        window.sendAutomaticEmailNotification = function(res, isRetrieval = false) {
             const statusText = document.getElementById('email-status-text');
             const statusBg = document.getElementById('email-sending-status');
             
@@ -1276,7 +1189,6 @@
                 statusText.textContent = isRetrieval ? "Rigenerazione e invio della e-mail in corso..." : "Generazione e invio della ricevuta email...";
             }
 
-            // Ottimizzazione asincrona: svincola il thread principale per evitare lag nella visualizzazione
             setTimeout(async () => {
                 try {
                     if (typeof window.jspdf === 'undefined') {
@@ -1286,8 +1198,7 @@
                     const { jsPDF } = window.jspdf;
                     const pdfDoc = new jsPDF('p', 'mm', 'a4');
                     
-                    // Intestazione ufficiale Primo Levi Seregno
-                    pdfDoc.setFillColor(30, 27, 75); // Dark Indigo
+                    pdfDoc.setFillColor(30, 27, 75);
                     pdfDoc.rect(0, 0, 210, 38, 'F');
                     
                     pdfDoc.setTextColor(255, 255, 255);
@@ -1299,15 +1210,13 @@
                     pdfDoc.text("Via Briantina 68, Seregno (MB) - Commissione Orientamento Scolastico", 15, 23);
                     pdfDoc.text("Email: orientamento@leviseregno.edu.it | Tel: 0362 221234", 15, 28);
                     
-                    // Card Titolo Ricevuta
-                    pdfDoc.setFillColor(79, 70, 229); // Accent Indigo
+                    pdfDoc.setFillColor(79, 70, 229);
                     pdfDoc.roundedRect(148, 8, 48, 12, 2, 2, 'F');
                     pdfDoc.setTextColor(255, 255, 255);
                     pdfDoc.setFont("Helvetica", "bold");
                     pdfDoc.setFontSize(9);
                     pdfDoc.text(isRetrieval ? "DUPLICATO RICEVUTA" : "RICEVUTA UFFICIALE", 150, 16);
                     
-                    // Titolo Documento
                     pdfDoc.setTextColor(30, 27, 75);
                     pdfDoc.setFontSize(14);
                     pdfDoc.text("CONFERMA PRENOTAZIONE MINI-STAGE 2026", 15, 52);
@@ -1316,7 +1225,6 @@
                     pdfDoc.setLineWidth(0.5);
                     pdfDoc.line(15, 56, 195, 56);
                     
-                    // Colonna 1: Dati Alunno
                     pdfDoc.setFillColor(249, 250, 251);
                     pdfDoc.roundedRect(15, 62, 85, 62, 3, 3, 'F');
                     pdfDoc.setDrawColor(229, 231, 235);
@@ -1344,7 +1252,6 @@
                     pdfDoc.text(`Cell: ${res.cellulare}`, 22, 102);
                     pdfDoc.text(`Email: ${res.email}`, 22, 106);
                     
-                    // Colonna 2: Dettagli Percorso / Stage
                     pdfDoc.setFillColor(245, 243, 255);
                     pdfDoc.roundedRect(108, 62, 87, 62, 3, 3, 'F');
                     pdfDoc.setDrawColor(221, 214, 254);
@@ -1356,7 +1263,6 @@
                     pdfDoc.text("DETTAGLI MINI-STAGE", 115, 69);
                     
                     pdfDoc.setTextColor(50, 50, 50);
-                    pdfDoc.setFontSize(8.5);
                     pdfDoc.text("Percorso Didattico:", 115, 76);
                     pdfDoc.setTextColor(79, 70, 229);
                     pdfDoc.setFont("Helvetica", "bold");
@@ -1373,7 +1279,6 @@
                     pdfDoc.setFont("Helvetica", "normal");
                     pdfDoc.text(res.stageTime, 115, 102);
                     
-                    // Box Codice Unico
                     pdfDoc.setFillColor(243, 244, 246);
                     pdfDoc.roundedRect(15, 132, 180, 16, 2, 2, 'F');
                     pdfDoc.setTextColor(30, 27, 75);
@@ -1385,7 +1290,6 @@
                     pdfDoc.setTextColor(220, 38, 38);
                     pdfDoc.text(res.code, 115, 142);
                     
-                    // Istruzioni per l'alunno
                     pdfDoc.setTextColor(30, 27, 75);
                     pdfDoc.setFontSize(10);
                     pdfDoc.setFont("Helvetica", "bold");
@@ -1406,14 +1310,11 @@
                         lineY += 5;
                     });
                     
-                    // Linea Divisoria per Barcode e QR
                     pdfDoc.setDrawColor(229, 231, 235);
                     pdfDoc.line(15, 192, 195, 192);
                     
-                    // Disegna il Barcode incorporato in tempo reale
-                    drawBarcodeInPDF(pdfDoc, res.code, 15, 198);
+                    window.drawBarcodeInPDF(pdfDoc, res.code, 15, 198);
                     
-                    // Inserimento QR-Code
                     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(res.code)}`;
                     pdfDoc.addImage(qrUrl, 'PNG', 155, 196, 26, 26);
                     
@@ -1444,7 +1345,6 @@
 
                     if (statusText) statusText.textContent = "Spedizione via e-mail in corso...";
 
-                    // Spedizione immediata non bloccante via fetch
                     fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1470,9 +1370,9 @@
                     }
                 }
             }, 50);
-        }
+        };
 
-        async function sendCancellationEmailNotification(res) {
+        window.sendCancellationEmailNotification = async function(res) {
             try {
                 const nameParts = res.nome.trim().split(' ');
                 const first = nameParts[0] || '';
@@ -1491,9 +1391,9 @@
             } catch(e) {
                 console.error("Errore invio e-mail cancellazione:", e);
             }
-        }
+        };
 
-        function applyFilters() {
+        window.applyFilters = function() {
             const fIndirizzo = document.getElementById('filter-indirizzo')?.value;
             const fType = document.getElementById('filter-type')?.value;
             const fDate = document.getElementById('filter-date')?.value.trim();
@@ -1510,29 +1410,29 @@
                 filtered = filtered.filter(item => item.stageDate && item.stageDate.includes(fDate));
             }
             
-            renderDashboardLists(filtered);
-            updateDashboardStats();
-            updateCharts();
-        }
+            window.renderDashboardLists(filtered);
+            window.updateDashboardStats();
+            window.updateCharts();
+        };
 
-        function clearFilters() {
+        window.clearFilters = function() {
             const fIndirizzo = document.getElementById('filter-indirizzo');
             const fType = document.getElementById('filter-type');
             const fDate = document.getElementById('filter-date');
             if (fIndirizzo) fIndirizzo.value = '';
             if (fType) fType.value = '';
             if (fDate) fDate.value = '';
-            applyFilters();
-        }
+            window.applyFilters();
+        };
 
-        function updateDashboardStats() {
+        window.updateDashboardStats = function() {
             const totalEl = document.getElementById('stat-total');
             if (totalEl) {
                 totalEl.textContent = allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').length.toString();
             }
-        }
+        };
 
-        function renderDashboardLists(filteredList) {
+        window.renderDashboardLists = function(filteredList) {
             const listActive = document.getElementById('list-active-prenotazioni');
             const listChecked = document.getElementById('list-checkedin-prenotazioni');
             const listCancelled = document.getElementById('list-cancelled-prenotazioni');
@@ -1543,62 +1443,312 @@
             const checkeds = filteredList.filter(b => b.type === 'entrato');
             const cancelled = filteredList.filter(b => b.type === 'cancellazione');
 
-            // Renderizza Attivi
             listActive.innerHTML = actives.map(b => `
                 <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
                     <div>
                         <strong class="text-indigo-900">${b.nome}</strong>
                         <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
                     </div>
-                    <button onclick="checkInStudent('${b.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1 px-2.5 rounded-lg transition">
+                    <button onclick="window.checkInStudent('${b.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1 px-2.5 rounded-lg transition">
                         Entrato
                     </button>
                 </div>
             `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessun iscritto.</p>`;
 
-            // Renderizza Entrati
             listChecked.innerHTML = checkeds.map(b => `
                 <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
                     <div>
                         <strong class="text-indigo-900">${b.nome}</strong>
                         <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
                     </div>
-                    <span class="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase">Confermato</span>
+                    <span class="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase">Presente</span>
                 </div>
             `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessuno presente.</p>`;
 
-            // Renderizza Cancellati
             listCancelled.innerHTML = cancelled.map(b => `
                 <div class="p-2.5 bg-white border border-gray-100 rounded-xl text-xs">
                     <strong class="text-red-900">${b.nome}</strong>
                     <p class="text-[10px] text-gray-400 font-mono">${b.code} | Annullata</p>
                 </div>
             `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4 font-normal">Nessun annullamento.</p>`;
-        }
+        };
 
-        // CONVALIDA ENTRATA ALUNNO DUAL-BACKEND
-        async function checkInStudent(code) {
+        window.checkInStudent = async function(code) {
+            const idx = allBookings.findIndex(b => b.code === code);
+            if (idx === -1) return window.showMessage("Iscrizione non trovata.", true);
+
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                await updateDoc(docRef, { type: 'entrato' });
+                window.showMessage(`Studente ${allBookings[idx].nome} segnato come ENTRATO!`);
+            } catch(e) {
+                console.error("Errore aggiornamento check-in su cloud:", e);
+                window.showMessage("Impossibile salvare sul cloud.", true);
+            }
+        };
+
+        // --- FUNZIONI DELLO SCANNER RIPRISTINATE ---
+        window.openScannerTerminal = function() {
+            window.setView('scanner-terminal');
+            const logsList = document.getElementById('scanner-logs-list');
+            if (logsList) {
+                logsList.innerHTML = `<p class="text-gray-400 italic text-[11px] text-center mt-8">Nessun codice scansionato in questa sessione.</p>`;
+            }
+            window.detectCameras();
+        };
+
+        window.detectCameras = function() {
+            const select = document.getElementById('scanner-camera-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Rilevamento in corso...</option>';
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Webcam ' + d.id}</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="">Nessuna fotocamera trovata</option>';
+                }
+            }).catch(err => {
+                console.error("Errore rilevamento webcam:", err);
+                select.innerHTML = '<option value="">Errore di accesso alla webcam</option>';
+            });
+        };
+
+        window.detectAndStartScanner = function() {
+            document.getElementById('scanner-idle-placeholder').classList.add('hidden');
+            const readerEl = document.getElementById('scanner-reader');
+            readerEl.innerHTML = '';
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    const select = document.getElementById('scanner-camera-select');
+                    let cameraId = select && select.value ? select.value : devices[0].id;
+                    
+                    html5QrScanner = new Html5Qrcode("scanner-reader");
+                    html5QrScanner.start(
+                        cameraId, 
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            if (decodedText.startsWith("MS-")) {
+                                window.processIncomingScannedCode(decodedText);
+                            }
+                        },
+                        (errorMessage) => {}
+                    ).catch(err => {
+                        console.error("Impossibile avviare scanner", err);
+                    });
+                } else {
+                    window.showMessage("Nessuna fotocamera trovata sul dispositivo.", true);
+                }
+            }).catch(err => {
+                window.showMessage("Impossibile accedere alle fotocamere.", true);
+            });
+        };
+
+        window.closeScannerTerminal = function() {
+            if (html5QrScanner) {
+                html5QrScanner.stop().then(() => {
+                    document.getElementById('scanner-reader').innerHTML = '';
+                    document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
+                }).catch(e => console.error(e));
+            }
+            window.setView('admin');
+        };
+
+        window.processIncomingScannedCode = async function(code) {
+            const feedback = document.getElementById('scanner-feedback');
             const booking = allBookings.find(b => b.code === code);
-            if (!booking) return showMessage("Iscrizione non trovata.", true);
 
-            if (offlineMode) {
-                booking.type = 'entrato';
-                saveLocalSandboxData();
-                applyFilters();
-                showMessage(`Studente ${booking.nome} segnato come ENTRATO!`);
+            if (!booking) {
+                window.showScannerFeedback(`Codice ${code} non trovato nel sistema.`, true);
+                return;
+            }
+
+            if (booking.type === 'entrato') {
+                window.showScannerFeedback(`Attenzione: ${booking.nome} è già stato marcato come presente.`, true);
+                return;
+            }
+
+            if (booking.type === 'cancellazione') {
+                window.showScannerFeedback(`La prenotazione per ${booking.nome} risulta precedentemente annullata.`, true);
+                return;
+            }
+
+            await window.checkInStudent(code);
+            window.showScannerFeedback(`Presente convalidato: ${booking.nome} (${booking.indirizzo})`);
+            
+            const logsList = document.getElementById('scanner-logs-list');
+            if (logsList) {
+                const logItem = document.createElement('div');
+                logItem.className = "p-1.5 bg-green-50 border border-green-200 text-green-800 rounded font-bold mb-1";
+                logItem.textContent = `[${new Date().toLocaleTimeString()}] ${code} - ${booking.nome}`;
+                if(logsList.querySelector('p')) logsList.innerHTML = '';
+                logsList.prepend(logItem);
+            }
+        };
+
+        window.showScannerFeedback = function(msg, isError = false) {
+            const fb = document.getElementById('scanner-feedback');
+            if(!fb) return;
+            fb.textContent = msg;
+            fb.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            if (isError) {
+                fb.classList.add('bg-red-100', 'text-red-800');
             } else {
+                fb.classList.add('bg-green-100', 'text-green-800');
+            }
+        };
+
+        window.handleBarcodeKeyPress = function(event) {
+            if (event.key === 'Enter') {
+                window.processManualCheckIn();
+            }
+        };
+
+        window.processManualCheckIn = function() {
+            const input = document.getElementById('barcode-scan-input');
+            const code = input.value.trim().toUpperCase();
+            if (!code) return;
+            window.processIncomingScannedCode(code);
+            input.value = '';
+        };
+
+        window.calculateReminderEligibility = function() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            const textEl = document.getElementById('reminder-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti idonei a ricevere il promemoria: ${eligible.length}`;
+            }
+        };
+
+        window.saveReminderDaysConfig = async function() {
+            const days = parseInt(document.getElementById('reminder-days-input').value) || 7;
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`);
+                await setDoc(docRef, { daysBefore: days });
+                window.showMessage("Anticipo promemoria salvato su Database Cloud!");
+            } catch(e) {
+                window.showMessage("Impossibile salvare la configurazione sul cloud.", true);
+            }
+        };
+
+        window.sendBatchReminders = async function() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            if (eligible.length === 0) return window.showMessage("Nessuno studente idoneo al promemoria.", true);
+            
+            window.showMessage("Invio promemoria in blocco avviato...");
+            
+            for (const student of eligible) {
                 try {
-                    const { doc, updateDoc } = window.firebaseImports;
-                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
-                    await updateDoc(docRef, { type: 'entrato' });
-                    showMessage(`Studente ${booking.nome} segnato come ENTRATO!`);
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(REMINDER_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            orario: student.stageTime,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                    await updateDoc(docRef, { reminderSent: true });
                 } catch(e) {
-                    showMessage("Errore nell'aggiornamento.", true);
+                    console.error("Errore promemoria per:", student.code, e);
                 }
             }
-        }
+            
+            window.showMessage("Invio promemoria completato!");
+        };
 
-        function updateCharts() {
+        window.sendSingleManualReminder = async function() {
+            const code = document.getElementById('input-manual-reminder-code').value.trim().toUpperCase();
+            if(!code) return window.showMessage("Inserisci un codice valido.", true);
+
+            const student = allBookings.find(b => b.code === code);
+            if(!student) return window.showMessage("Nessuna prenotazione trovata.", true);
+
+            window.showMessage(`Invio promemoria singolo a ${student.nome}...`);
+
+            try {
+                const nameParts = student.nome.trim().split(' ');
+                const first = nameParts[0] || '';
+                const rest = nameParts.slice(1).join(' ') || '';
+
+                await fetch(REMINDER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        email: student.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: student.code,
+                        data: student.stageDate,
+                        orario: student.stageTime,
+                        attivita: student.indirizzo
+                    })
+                });
+
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                await updateDoc(docRef, { reminderSent: true });
+
+                window.showMessage("Promemoria manuale inviato!");
+                document.getElementById('input-manual-reminder-code').value = '';
+            } catch(e) {
+                window.showMessage("Errore nell'invio.", true);
+            }
+        };
+
+        window.calculateCertificateEligibility = function() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            const textEl = document.getElementById('certificate-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti presenti idonei all'attestato: ${eligible.length}`;
+            }
+        };
+
+        window.sendBatchCertificates = async function() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            if (eligible.length === 0) return window.showMessage("Nessuno studente presente necessita di attestato.", true);
+            
+            window.showMessage("Generazione e invio in blocco degli attestati...");
+            
+            for (const student of eligible) {
+                try {
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(CERTIFICATE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                    await updateDoc(docRef, { certificateSent: true });
+                } catch(e) {
+                    console.error("Errore certificato per:", student.code, e);
+                }
+            }
+            
+            window.showMessage("Invio attestati completato!");
+        };
+
+        window.updateCharts = function() {
             const canvas = document.getElementById('reservationsChart');
             if(!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -1631,643 +1781,220 @@
                     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
                 }
             });
-        }
+        };
 
-        // GESTIONE PROMEMORIA E CONFIGURAZIONI
-        function calculateReminderEligibility() {
-            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
-            const textEl = document.getElementById('reminder-eligibility-count');
-            if (textEl) {
-                textEl.textContent = `Studenti idonei a ricevere il promemoria: ${eligible.length}`;
-            }
-        }
-
-        async function saveReminderDaysConfig() {
-            const days = parseInt(document.getElementById('reminder-days-input').value) || 7;
-            if (offlineMode) {
-                reminderDaysConfig = days;
-                localStorage.setItem('levi_reminder_days', days.toString());
-                showMessage("Anticipo promemoria salvato localmente!");
+        window.adminLogin = function() {
+            const pass = document.getElementById('admin-password').value;
+            if (pass === ADMIN_PASSWORD) {
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                window.calculateReminderEligibility();
+                window.calculateCertificateEligibility();
+                window.applyFilters();
             } else {
-                try {
-                    const { doc, setDoc } = window.firebaseImports;
-                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`);
-                    await setDoc(docRef, { daysBefore: days });
-                    showMessage("Anticipo promemoria salvato su Database!");
-                } catch(e) {
-                    showMessage("Impossibile salvare la configurazione.", true);
-                }
+                window.showMessage("Password non corretta.", true);
             }
-        }
+        };
 
-        async function sendBatchReminders() {
-            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
-            if (eligible.length === 0) return showMessage("Nessuno studente idoneo al promemoria.", true);
-            
-            if(!confirm(`Vuoi inviare un promemoria e-mail a tutti i ${eligible.length} iscritti?`)) return;
+        window.renderCapacitiesConfigInputs = function() {
+            const container = document.getElementById('indirizzi-capacita-inputs');
+            if (!container) return;
 
-            showMessage("Invio promemoria in blocco avviato...");
-            
-            for (const student of eligible) {
-                try {
-                    const nameParts = student.nome.trim().split(' ');
-                    const first = nameParts[0] || '';
-                    const rest = nameParts.slice(1).join(' ') || '';
+            container.innerHTML = INDIRIZZI_MAPPING.map(ind => `
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-bold text-gray-700 truncate w-3/4">${ind}</span>
+                    <input type="number" min="1" id="cap-input-${ind.replace(/\s+/g, '_')}" value="${capacitiesConfig[ind] || 5}" class="w-16 p-1.5 border rounded-lg text-center bg-white font-bold text-indigo-900">
+                </div>
+            `).join('');
+        };
 
-                    await fetch(REMINDER_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({
-                            email: student.email,
-                            nome: first,
-                            cognome: rest,
-                            codice_prenotazione: student.code,
-                            data: student.stageDate,
-                            orario: student.stageTime,
-                            attivita: student.indirizzo
-                        })
-                    });
-
-                    // Segna come inviato
-                    if (offlineMode) {
-                        student.reminderSent = true;
-                    } else {
-                        const { doc, updateDoc } = window.firebaseImports;
-                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
-                        await updateDoc(docRef, { reminderSent: true });
+        window.saveCapacities = async function() {
+            for (const ind of INDIRIZZI_MAPPING) {
+                const el = document.getElementById(`cap-input-${ind.replace(/\s+/g, '_')}`);
+                if (el) {
+                    const val = parseInt(el.value) || 5;
+                    capacitiesConfig[ind] = val;
+                    try {
+                        await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`, ind), { indirizzo: ind, postiMax: val });
+                    } catch(e) {
+                        console.error("Errore update capacitá cloud:", e);
                     }
-                } catch(e) {
-                    console.error("Errore promemoria per:", student.code, e);
                 }
             }
-            
-            if(offlineMode) saveLocalSandboxData();
-            showMessage("Invio promemoria completato!");
-            calculateReminderEligibility();
-        }
+            window.showMessage("Capacità dei posti aggiornata con successo nel Cloud!");
+        };
 
-        async function sendSingleManualReminder() {
-            const code = document.getElementById('input-manual-reminder-code').value.trim().toUpperCase();
-            if(!code) return showMessage("Inserisci un codice valido.", true);
+        window.handleAddSlot = async function(e) {
+            e.preventDefault();
+            const ind = document.getElementById('new-slot-indirizzo').value;
+            const day = document.getElementById('new-slot-day').value.trim();
+            const dateStr = document.getElementById('new-slot-date').value.trim();
+            const time = document.getElementById('new-slot-time').value.trim();
+            const pmax = parseInt(document.getElementById('new-slot-max').value);
 
-            const student = allBookings.find(b => b.code === code);
-            if(!student) return showMessage("Nessuna prenotazione trouvata.", true);
-
-            showMessage(`Invio promemoria singolo a ${student.nome}...`);
+            const slotId = "SLOT-" + Date.now();
+            const newSlot = {
+                id: slotId,
+                indirizzo: ind,
+                day: day,
+                dateStr: dateStr,
+                time: time,
+                postiMax: pmax || capacitiesConfig[ind] || 5
+            };
 
             try {
-                const nameParts = student.nome.trim().split(' ');
-                const first = nameParts[0] || '';
-                const rest = nameParts.slice(1).join(' ') || '';
-
-                await fetch(REMINDER_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        email: student.email,
-                        nome: first,
-                        cognome: rest,
-                        codice_prenotazione: student.code,
-                        data: student.stageDate,
-                        orario: student.stageTime,
-                        attivita: student.indirizzo
-                    })
-                });
-
-                if (offlineMode) {
-                    student.reminderSent = true;
-                    saveLocalSandboxData();
-                } else {
-                    const { doc, updateDoc } = window.firebaseImports;
-                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
-                    await updateDoc(docRef, { reminderSent: true });
-                }
-
-                showMessage("Promemoria manuale inviato!");
-                document.getElementById('input-manual-reminder-code').value = '';
-            } catch(e) {
-                showMessage("Errore nell'invio.", true);
+                await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId), newSlot);
+                window.showMessage("Nuovo slot aggiunto correttamente nel Cloud!");
+                document.getElementById('add-slot-form').reset();
+            } catch(err) {
+                console.error("Errore salvataggio slot:", err);
+                window.showMessage("Impossibile salvare il nuovo slot.", true);
             }
-        }
+        };
 
-        function calculateCertificateEligibility() {
-            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
-            const textEl = document.getElementById('certificate-eligibility-count');
-            if (textEl) {
-                textEl.textContent = `Studenti presenti idonei all'attestato: ${eligible.length}`;
-            }
-        }
+        window.renderSlotManagementTable = function() {
+            const list = document.getElementById('slot-management-list');
+            if (!list) return;
 
-        async function sendBatchCertificates() {
-            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
-            if (eligible.length === 0) return showMessage("Nessuno studente presente ha bisogno dell'attestato.", true);
-            
-            if(!confirm(`Vuoi generare e inviare l'attestato PDF via mail a ${eligible.length} studenti?`)) return;
+            list.innerHTML = stageSlots.map(s => `
+                <tr class="border-b border-gray-50 hover:bg-indigo-50/10">
+                    <td class="p-3 font-semibold">${s.indirizzo}</td>
+                    <td class="p-3">${s.day}</td>
+                    <td class="p-3 font-mono">${s.dateStr}</td>
+                    <td class="p-3 font-mono">${s.time}</td>
+                    <td class="p-3 text-center font-bold">${s.postiMax || capacitiesConfig[s.indirizzo] || 5}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="window.deleteSlot('${s.id}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded transition">Elimina</button>
+                    </td>
+                </tr>
+            `).join('');
+        };
 
-            showMessage("Generazione e invio in blocco degli attestati...");
-            
-            for (const student of eligible) {
+        window.deleteSlot = async function(id) {
+            if (confirm("Rimuovere questo slot dal calendario?")) {
                 try {
-                    const nameParts = student.nome.trim().split(' ');
-                    const first = nameParts[0] || '';
-                    const rest = nameParts.slice(1).join(' ') || '';
-
-                    await fetch(CERTIFICATE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({
-                            email: student.email,
-                            nome: first,
-                            cognome: rest,
-                            codice_prenotazione: student.code,
-                            data: student.stageDate,
-                            attivita: student.indirizzo
-                        })
-                    });
-
-                    // Aggiorna lo stato nel DB/Sandbox
-                    if (offlineMode) {
-                        student.certificateSent = true;
-                    } else {
-                        const { doc, updateDoc } = window.firebaseImports;
-                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
-                        await updateDoc(docRef, { certificateSent: true });
-                    }
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, id));
+                    window.showMessage("Slot rimosso dal calendario cloud.");
                 } catch(e) {
-                    console.error("Errore certificato per:", student.code, e);
+                    window.showMessage("Impossibile rimuovere lo slot dal cloud.", true);
                 }
             }
-            
-            if(offlineMode) saveLocalSandboxData();
-            showMessage("Invio attestati completato con successo!");
-            calculateCertificateEligibility();
-        }
+        };
 
-        // SCANSIONE FISICA QR/BARCODE WEBCAM E INTERCETTAZIONE USB
-        function setupBarcodeScannerGlobalInterceptor() {
-            let buffer = "";
-            let lastKeyTime = Date.now();
+        window.exportToExcel = function() {
+            let csv = "Codice,Studente,Email,Cellulare,Scuola,Indirizzo,Giorno,Data,Orario,Stato,PromemoriaInviato,AttestatoInviato\n";
+            allBookings.forEach(b => {
+                csv += `"${b.code}","${b.nome}","${b.email}","${b.cellulare}","${b.scuola || ''}","${b.indirizzo}","${b.stageDay}","${b.stageDate}","${b.stageTime}","${b.type}","${b.reminderSent}","${b.certificateSent}"\n`;
+            });
 
-            window.addEventListener('keydown', (e) => {
-                const currentTime = Date.now();
-                if (currentTime - lastKeyTime > 100) {
-                    buffer = ""; 
-                }
-                lastKeyTime = currentTime;
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `iscritti_ministage_levi_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
 
-                if (e.key === 'Enter') {
-                    if (buffer.length >= 4 && buffer.startsWith("MS-")) {
-                        processIncomingScannedCode(buffer);
-                        buffer = "";
-                        e.preventDefault();
+        window.confirmClearAll = async function() {
+            if(confirm("Sei sicuro di voler svuotare interamente l'archivio iscritti? L'operazione è irreversibile.")) {
+                try {
+                    for (const b of allBookings) {
+                        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, b.code));
                     }
-                } else if (e.key !== 'Shift') {
-                    buffer += e.key;
+                    window.showMessage("Database iscritti cloud svuotato correttamente.");
+                } catch(e) {
+                    window.showMessage("Errore durante lo svuotamento.", true);
                 }
-            });
-        }
-
-        function handleBarcodeKeyPress(event) {
-            if (event.key === 'Enter') {
-                processManualCheckIn();
             }
-        }
+        };
 
-        async function processManualCheckIn() {
-            const input = document.getElementById('barcode-scan-input');
-            const code = input.value.trim().toUpperCase();
-            if(!code) return;
-            await processIncomingScannedCode(code);
-            input.value = '';
-        }
-
-        async function processIncomingScannedCode(code) {
-            const feedback = document.getElementById('scanner-feedback');
-            const booking = allBookings.find(b => b.code === code);
-
-            if (!booking) {
-                showScannerFeedback(`Codice ${code} non trovato nel sistema.`, true);
-                return;
-            }
-
-            if (booking.type === 'entrato') {
-                showScannerFeedback(`Attenzione: ${booking.nome} è già stato marcato come presente.`, true);
-                return;
-            }
-
-            await checkInStudent(code);
-            showScannerFeedback(`Presente convalidato: ${booking.nome} (${booking.indirizzo})`);
-            
-            const logsList = document.getElementById('scanner-logs-list');
-            if (logsList) {
-                const logItem = document.createElement('div');
-                logItem.className = "p-1.5 bg-green-50 border border-green-200 text-green-800 rounded font-bold mb-1";
-                logItem.textContent = `[${new Date().toLocaleTimeString()}] ${code} - ${booking.nome}`;
-                if(logsList.querySelector('p')) logsList.innerHTML = '';
-                logsList.prepend(logItem);
-            }
-        }
-
-        function showScannerFeedback(msg, isError = false) {
-            const fb = document.getElementById('scanner-feedback');
-            if(!fb) return;
-            fb.textContent = msg;
-            fb.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
-            if (isError) {
-                fb.classList.add('bg-red-100', 'text-red-800');
-            } else {
-                fb.classList.add('bg-green-100', 'text-green-800');
-            }
-        }
-
-        function detectAndStartScanner() {
-            document.getElementById('scanner-idle-placeholder').classList.add('hidden');
-            const readerEl = document.getElementById('scanner-reader');
-            readerEl.innerHTML = '';
-
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length > 0) {
-                    const select = document.getElementById('scanner-camera-select');
-                    let cameraId = select && select.value ? select.value : devices[0].id;
-                    
-                    html5QrScanner = new Html5Qrcode("scanner-reader");
-                    html5QrScanner.start(
-                        cameraId, 
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText) => {
-                            if (decodedText.startsWith("MS-")) {
-                                processIncomingScannedCode(decodedText);
-                            }
-                        },
-                        (errorMessage) => {}
-                    ).catch(err => {
-                        console.error("Impossibile avviare scanner", err);
-                    });
-                } else {
-                    showMessage("Nessuna fotocamera trovata sul dispositivo.", true);
-                }
-            }).catch(err => {
-                showMessage("Impossibile accedere alle fotocamere.", true);
-            });
-        }
-
-        function closeScannerTerminal() {
-            if (html5QrScanner) {
-                html5QrScanner.stop().then(() => {
-                    document.getElementById('scanner-reader').innerHTML = '';
-                    document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
-                }).catch(e => console.error(e));
-            }
-            setView('admin');
-        }
-
-        function openManageBookingModal(mode) {
-            window.currentManageMode = mode;
+        window.openManageBookingModal = function(type) {
+            manageActionType = type;
             const title = document.getElementById('manage-modal-title');
             const submitBtn = document.getElementById('btn-submit-action');
-
-            if (mode === 'retrieve') {
-                title.textContent = 'Recupera la tua Iscrizione';
-                submitBtn.textContent = 'Recupera Ricevuta';
-                submitBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
-                submitBtn.onclick = () => searchAndHandleBooking('retrieve');
+            
+            if (type === 'cancel') {
+                title.textContent = "Cancella Prenotazione";
+                submitBtn.textContent = "Annulla la Prenotazione";
+                submitBtn.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
             } else {
-                title.textContent = 'Annulla la tua Prenotazione';
-                submitBtn.textContent = 'Annulla Iscrizione';
-                submitBtn.className = "bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
-                submitBtn.onclick = () => searchAndHandleBooking('cancel');
+                title.textContent = "Recupera la Prenotazione";
+                submitBtn.textContent = "Mostra Ricevuta";
+                submitBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
             }
-
+            
             document.getElementById('manage-booking-modal').classList.remove('hidden');
-        }
+        };
 
-        function closeManageBookingBookingModal() {
+        window.closeManageBookingBookingModal = function() {
             document.getElementById('manage-booking-modal').classList.add('hidden');
             document.getElementById('input-search-code').value = '';
             document.getElementById('input-search-name').value = '';
             document.getElementById('input-search-email').value = '';
-        }
+        };
 
-        async function searchAndHandleBooking(action) {
+        window.searchAndHandleBooking = async function() {
             const inputCode = document.getElementById('input-search-code').value.trim().toUpperCase();
             const inputName = document.getElementById('input-search-name').value.trim().toLowerCase();
             const inputEmail = document.getElementById('input-search-email').value.trim().toLowerCase();
 
-            if (!inputCode && (!inputName || !inputEmail)) {
-                return showMessage("Compila i campi per effettuare la ricerca.", true);
-            }
+            let booking = null;
 
-            let found = null;
             if (inputCode) {
-                found = allBookings.find(b => b.code === inputCode);
-            } else {
-                found = allBookings.find(b => b.nome.toLowerCase() === inputName && b.email.toLowerCase() === inputEmail);
+                booking = allBookings.find(b => b.code === inputCode);
+            } else if (inputName && inputEmail) {
+                booking = allBookings.find(b => b.nome.toLowerCase().includes(inputName) && b.email.toLowerCase() === inputEmail);
             }
 
-            if (!found) return showMessage("Nessuna iscrizione trovata nel sistema.", true);
+            if (!booking) {
+                return window.showMessage("Nessuna prenotazione trovata corrispondente ai dati inseriti.", true);
+            }
 
-            closeManageBookingBookingModal();
+            window.closeManageBookingBookingModal();
 
-            if (action === 'retrieve') {
-                setView('receipt', { code: found.code, type: found.type, data: found });
-                showMessage("Iscrizione recuperata correttamente!");
-                if(!offlineMode) sendAutomaticEmailNotification(found, true);
-            } else {
-                if (found.type === 'cancellazione') return showMessage("Iscrizione già annullata.", true);
-                
-                if (offlineMode) {
-                    found.type = 'cancellazione';
-                    saveLocalSandboxData();
-                    setView('receipt', { code: found.code, type: 'cancellazione', data: found });
-                    showMessage("Iscrizione annullata offline.");
-                } else {
+            if (manageActionType === 'cancel') {
+                if (booking.type === 'cancellazione') {
+                    return window.showMessage("Questa prenotazione risulta già annullata.", true);
+                }
+                if (confirm(`Confermi di voler annullare la prenotazione per ${booking.nome}?`)) {
                     try {
-                        const { doc, updateDoc } = window.firebaseImports;
-                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, found.code);
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, booking.code);
                         await updateDoc(docRef, { type: 'cancellazione' });
                         
-                        found.type = 'cancellazione';
-                        setView('receipt', { code: found.code, type: 'cancellazione', data: found });
-                        showMessage("Prenotazione annullata. Il posto è di nuovo disponibile.");
-                        
-                        sendCancellationEmailNotification(found);
+                        window.sendCancellationEmailNotification(booking);
+                        window.setView('receipt', { code: booking.code, type: 'cancellazione', data: booking });
+                        window.showMessage("La prenotazione è stata annullata.");
                     } catch(e) {
-                        showMessage("Errore nell'annullamento.", true);
+                        window.showMessage("Errore nell'annullamento cloud.", true);
                     }
                 }
-            }
-        }
-
-        function adminLogin() {
-            const pwd = document.getElementById('admin-password').value;
-            if (pwd === ADMIN_PASSWORD) {
-                document.getElementById('admin-login').classList.add('hidden');
-                document.getElementById('admin-dashboard').classList.remove('hidden');
-                applyFilters();
             } else {
-                showMessage("Chiave d'accesso non valida!", true);
+                window.setView('receipt', { code: booking.code, type: booking.type, data: booking });
+                window.sendAutomaticEmailNotification(booking, true);
             }
-        }
+        };
 
-        function exportToExcel() {
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Codice,Indirizzo,Giorno,Data,Orario,Studente,Scuola,Email,Cellulare,Stato\n";
-            allBookings.forEach(b => {
-                let row = [
-                    b.code,
-                    `"${b.indirizzo.replace(/"/g, '""')}"`,
-                    `"${b.stageDay}"`,
-                    `"${b.stageDate}"`,
-                    `"${b.stageTime}"`,
-                    `"${b.nome.replace(/"/g, '""')}"`,
-                    `"${b.scuola.replace(/"/g, '""')}"`,
-                    `"${b.email}"`,
-                    `"${b.cellulare}"`,
-                    b.type
-                ].join(",");
-                csvContent += row + "\n";
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "iscritti_mini_stage_levi.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        async function confirmClearAll() {
-            if(!confirm("ATTENZIONE: Sei sicuro di voler SVUOTARE l'intero database delle iscrizioni? Questa operazione è irreversibile.")) return;
+        // Inizializzazione dell'applicazione
+        async function initializeAppLogic() {
+            window.updateStatusText("CONNESSIONE IN CORSO...");
             
-            if (offlineMode) {
-                allBookings = [];
-                saveLocalSandboxData();
-                applyFilters();
-                showMessage("Database locale svuotato.");
-            } else {
-                try {
-                    const { doc, deleteDoc } = window.firebaseImports;
-                    for (const b of allBookings) {
-                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, b.code);
-                        await deleteDoc(docRef);
-                    }
-                    showMessage("Database cloud svuotato con successo!");
-                } catch(e) {
-                    showMessage("Errore durante lo svuotamento.", true);
-                }
-            }
-        }
-
-        // AGGIUNTA SLOT DOCENTI DUAL-BACKEND
-        async function handleAddSlot(event) {
-            event.preventDefault();
-            const indirizzo = document.getElementById('new-slot-indirizzo').value;
-            const day = document.getElementById('new-slot-day').value.trim();
-            const dateStr = document.getElementById('new-slot-date').value.trim();
-            const time = document.getElementById('new-slot-time').value.trim();
-            const inputMax = document.getElementById('new-slot-max').value;
-            const postiMax = inputMax ? parseInt(inputMax) : (capacitiesConfig[indirizzo] || 5);
-
-            if (!day || !dateStr || !time) return showMessage("Tutti i campi sono obbligatori.", true);
-
-            const slotId = `${indirizzo.substring(0, 4).toUpperCase()}-${dateStr.replace('/', '')}-${time.replace(/[:\- ]/g, '')}`;
-            
-            const newSlot = { id: slotId, indirizzo, day, dateStr, time, postiMax };
-
-            if (offlineMode) {
-                stageSlots.push(newSlot);
-                saveLocalSandboxData();
-                renderSlotManagementTable();
-                showMessage("Slot inserito in archivio locale.");
-                document.getElementById('add-slot-form').reset();
-            } else {
-                try {
-                    const { doc, setDoc } = window.firebaseImports;
-                    const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
-                    await setDoc(slotRef, newSlot);
-                    showMessage("Slot salvato sul cloud!");
-                    document.getElementById('add-slot-form').reset();
-                } catch (e) {
-                    showMessage("Impossibile salvare lo slot.", true);
-                }
-            }
-        }
-
-        async function deleteSlot(slotId) {
-            if (!confirm("Rimuovere questo slot dal calendario?")) return;
-            
-            if (offlineMode) {
-                stageSlots = stageSlots.filter(s => s.id !== slotId);
-                saveLocalSandboxData();
-                renderSlotManagementTable();
-                showMessage("Slot rimosso.");
-            } else {
-                try {
-                    const { doc, deleteDoc } = window.firebaseImports;
-                    const slotRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId);
-                    await deleteDoc(slotRef);
-                    showMessage("Slot rimosso dal cloud.");
-                } catch(e) {
-                    showMessage("Errore.", true);
-                }
-            }
-        }
-
-        function renderSlotManagementTable() {
-            const tbody = document.getElementById('slot-management-list');
-            if (!tbody) return;
-            tbody.innerHTML = stageSlots.map(slot => `
-                <tr class="hover:bg-indigo-50/20 transition">
-                    <td class="p-3 font-bold text-indigo-900">${slot.indirizzo}</td>
-                    <td class="p-3">${slot.day}</td>
-                    <td class="p-3 font-extrabold text-indigo-600">${slot.dateStr}</td>
-                    <td class="p-3 font-mono">${slot.time}</td>
-                    <td class="p-3 font-bold">${slot.postiMax || capacitiesConfig[slot.indirizzo] || 5}</td>
-                    <td class="p-3 text-right">
-                        <button onclick="deleteSlot('${slot.id}')" class="text-red-500 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 py-1 px-2 rounded-lg transition border border-red-100">
-                            Elimina
-                        </button>
-                    </td>
-                </tr>
-            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-400 italic">Nessun slot presente.</td></tr>`;
-        }
-
-        function renderCapacitiesConfigInputs() {
-            const container = document.getElementById('indirizzi-capacita-inputs');
-            if (!container) return;
-            container.innerHTML = INDIRIZZI_MAPPING.map(ind => `
-                <div class="text-[11px]">
-                    <label class="block font-bold text-gray-600 mb-0.5">${ind}</label>
-                    <input type="number" data-indirizzo="${ind}" value="${capacitiesConfig[ind] || 5}" min="1" class="w-full p-1.5 bg-white border border-indigo-100 rounded-lg text-center font-bold text-indigo-900 focus:ring-1 focus:ring-indigo-500">
-                </div>
-            `).join('');
-        }
-
-        function saveCapacities() {
-            const inputs = document.querySelectorAll('#indirizzi-capacita-inputs input');
-            inputs.forEach(async input => {
-                const ind = input.getAttribute('data-indirizzo');
-                const val = parseInt(input.value) || 5;
-                capacitiesConfig[ind] = val;
-                if (!offlineMode) {
-                    const { doc, setDoc } = window.firebaseImports;
-                    await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`, ind), { indirizzo: ind, postiMax: val });
-                }
-            });
-            if (offlineMode) saveLocalSandboxData();
-            showMessage("Capacità dei posti salvata con successo!");
-        }
-
-        async function updateUSBDevicesList() {
-            const listEl = document.getElementById('usb-devices-list');
-            if (!listEl) return;
-            
-            if (!navigator.hid) {
-                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Rilevamento HID disattivato per sicurezza. La pistola USB funziona ugualmente tramite l\'emulazione tastiera in background.</p>';
+            if (!window.firebaseImports) {
+                console.error("Librerie Firebase SDK non caricate correttamente!");
+                window.updateStatusText("ERRORE DI CARICAMENTO", true);
                 return;
             }
 
-            try {
-                const devices = await navigator.hid.getDevices();
-                if (!devices || devices.length === 0) {
-                    listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Nessun lettore USB HID autorizzato.</p>';
-                    return;
-                }
-
-                listEl.innerHTML = devices.map(device => `
-                    <div class="flex items-center justify-between p-2 bg-purple-100/50 border border-purple-200 rounded-lg text-[11px] font-bold text-purple-900 shadow-sm animate-fade-in">
-                        <div class="flex items-center space-x-2">
-                            <span class="truncate max-w-[180px]">${device.productName || 'Periferica USB'}</span>
-                        </div>
-                        <span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Pronto</span>
-                    </div>
-                `).join('');
-            } catch(e) {
-                console.warn("Rilevamento HID limitato", e);
-                listEl.innerHTML = '<p class="text-gray-400 italic text-[11px]">Lo scanner USB funziona in emulazione tastiera.</p>';
-            }
+            await window.startFirebaseIntegration();
+            window.createBubbles();
         }
 
-        function createBubbles() {
-            const bg = document.getElementById('bubble-bg');
-            if (!bg) return;
-            bg.innerHTML = '';
-            
-            const headerLogoEl = document.getElementById('header-logo');
-            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'levi.png';
-
-            const bubbleCount = 14;
-            for (let i = 0; i < bubbleCount; i++) {
-                const bubble = document.createElement('div');
-                bubble.classList.add('bubble');
-                const size = Math.random() * 75 + 45; 
-                bubble.style.width = `${size}px`;
-                bubble.style.height = `${size}px`;
-                bubble.style.left = `${Math.random() * 100}%`;
-                bubble.style.animationDelay = `${Math.random() * 10}s`;
-                bubble.style.animationDuration = `${Math.random() * 8 + 12}s`;
-                bubble.style.backgroundImage = `url('${logoUrl}')`;
-                bg.appendChild(bubble);
-            }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAppLogic);
+        } else {
+            initializeAppLogic();
         }
 
-        function openScannerTerminal() {
-            setView('scanner-terminal');
-            document.getElementById('scanner-logs-list').innerHTML = `
-                <p class="text-gray-400 italic text-[11px] text-center mt-12">Nessun codice scansionato in questa sessione.</p>
-            `;
-            detectCameras();
-            updateUSBDevicesList();
-        }
-
-        function goToHome() { setView('home'); }
-        function showAdminView() {
-            setView('admin');
-            document.getElementById('admin-password').value = '';
-            document.getElementById('admin-login').classList.remove('hidden');
-            document.getElementById('admin-dashboard').classList.add('hidden');
-            
-            const filterIndirizzo = document.getElementById('filter-indirizzo');
-            if(filterIndirizzo) {
-                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
-            }
-            const addDropdown = document.getElementById('new-slot-indirizzo');
-            if (addDropdown) {
-                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
-            }
-            renderCapacitiesConfigInputs();
-            renderSlotManagementTable();
-        }
-
-        // ESPOSIZIONE DELLE CHIAMATE GLOBALI SULL'OGGETTO WINDOW (Evita i ReferenceError nei file modulo)
-        window.openBookingModal = openBookingModal;
-        window.closeModal = closeModal;
-        window.confirmBooking = confirmBooking;
-        window.openManageBookingModal = openManageBookingModal;
-        window.closeManageBookingBookingModal = closeManageBookingBookingModal;
-        window.searchAndHandleBooking = searchAndHandleBooking;
-        window.deleteSlot = deleteSlot;
-        window.saveCapacities = saveCapacities;
-        window.handleAddSlot = handleAddSlot;
-        window.setView = setView;
-        window.goToHome = goToHome;
-        window.showAdminView = showAdminView;
-        window.adminLogin = adminLogin;
-        window.openScannerTerminal = openScannerTerminal;
-        window.closeScannerTerminal = closeScannerTerminal;
-        window.detectAndStartScanner = detectAndStartScanner;
-        window.handleBarcodeKeyPress = handleBarcodeKeyPress;
-        window.processManualCheckIn = processManualCheckIn;
-        window.saveReminderDaysConfig = saveReminderDaysConfig;
-        window.sendBatchReminders = sendBatchReminders;
-        window.sendSingleManualReminder = sendSingleManualReminder;
-        window.sendBatchCertificates = sendBatchCertificates;
-        window.exportToExcel = exportToExcel;
-        window.confirmClearAll = confirmClearAll;
-        window.applyFilters = applyFilters;
-        window.clearFilters = clearFilters;
-        window.detectCameras = detectCameras;
-        window.checkInStudent = checkInStudent;
     </script>
 </body>
 </html>
