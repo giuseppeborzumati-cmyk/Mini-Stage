@@ -1063,17 +1063,21 @@
                 certificateSent: false
             };
 
+            // Caricamento ISTANTANEO della pagina di ricevuta senza lag o freeze
             window.setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
             window.showMessage("Prenotazione registrata con successo!");
 
-            try {
-                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
-                await setDoc(docRef, reservationData);
-                window.sendAutomaticEmailNotification(reservationData, false);
-            } catch(e) {
-                console.error("Errore salvataggio database cloud:", e);
-                window.showMessage("Errore salvataggio. Riprova più tardi.", true);
-            }
+            // Eseguiamo il salvataggio in database e l'invio della mail in background
+            setTimeout(async () => {
+                try {
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                    await setDoc(docRef, reservationData);
+                    window.sendAutomaticEmailNotification(reservationData, false);
+                } catch(e) {
+                    console.error("Errore salvataggio database cloud:", e);
+                    window.showMessage("Errore di sincronizzazione cloud, ma la ricevuta è generata.", true);
+                }
+            }, 150);
         };
 
         window.createBarcodeDataURL = function(text) {
@@ -1168,10 +1172,12 @@
             const statusBg = document.getElementById('email-sending-status');
             
             if (statusBg) {
+                statusBg.classList.remove('hidden'); // Forza la visibilità all'avvio dell'invio
                 statusBg.className = "mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide";
                 statusText.textContent = isRetrieval ? "Rigenerazione e invio della e-mail in corso..." : "Generazione e invio della ricevuta email...";
             }
 
+            // Usiamo un delay per permettere alla ricevuta grafica di caricarsi istantaneamente sullo schermo prima della creazione del PDF
             setTimeout(async () => {
                 try {
                     if (typeof window.jspdf === 'undefined') {
@@ -1334,25 +1340,24 @@
                         body: JSON.stringify(payload)
                     }).then(() => {
                         if (statusBg) {
-                            statusBg.className = "mb-4 bg-green-100 text-green-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
-                            statusText.textContent = "Email inviata con successo con allegato PDF!";
+                            // Rimozione istantanea del banner di stato appena l'email viene inviata con successo
+                            statusBg.classList.add('hidden');
                         }
                     }).catch(err => {
                         console.error("Errore fetch invio mail:", err);
                         if (statusBg) {
-                            statusBg.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
-                            statusText.textContent = "Ricevuta emessa! E-mail in coda d'invio.";
+                            // Rimuovi il banner anche in caso di errore per evitare caricature all'infinito
+                            statusBg.classList.add('hidden');
                         }
                     });
 
                 } catch(e) {
                     console.error("Errore notifica immediata email:", e);
                     if (statusBg) {
-                        statusBg.className = "mb-4 bg-orange-100 text-orange-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm print-hide";
-                        statusText.textContent = "Iscrizione convalidata correttamente.";
+                        statusBg.classList.add('hidden');
                     }
                 }
-            }, 50);
+            }, 350);
         };
 
         window.sendCancellationEmailNotification = async function(res) {
