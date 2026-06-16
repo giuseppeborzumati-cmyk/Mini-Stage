@@ -24,7 +24,7 @@
             position: relative;
         }
 
-        /* Sfondo animato con le bolle di sapone personalizzate con Logo Levi.png */
+        /* Sfondo animato con le bolle di sapone personalizzate con Logo levi.png */
         .bubble-container {
             position: fixed;
             top: 0;
@@ -151,7 +151,7 @@
         <!-- Header e barra di stato compatta con logo e indirizzo Primo Levi -->
         <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
             <div class="flex items-center space-x-3">
-                <img id="header-logo" src="Levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
+                <img id="header-logo" src="levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
                 <div>
                     <div class="flex items-center space-x-2">
                         <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
@@ -2194,7 +2194,7 @@
             bg.innerHTML = '';
             
             const headerLogoEl = document.getElementById('header-logo');
-            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'Levi.png';
+            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'levi.png';
 
             const bubbleCount = 14;
             for (let i = 0; i < bubbleCount; i++) {
