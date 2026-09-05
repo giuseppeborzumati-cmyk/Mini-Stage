@@ -1,0 +1,65 @@
+name: Normalize MiniStage November dates
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Start local site
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/ministage-http.log 2>&1 &
+          sleep 2
+      - name: Normalize Firebase slots
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            page.setDefaultTimeout(15000);
+            await page.goto('http://127.0.0.1:8000/?normalize=november',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__ && window.__miniStageCore?.db && window.firebaseImports?.setDoc,{timeout:20000});
+            const result=await page.evaluate(async()=>{
+              const f=window.firebaseImports, core=window.__miniStageCore;
+              const base=`artifacts/${core.appId}/public/data`;
+              const slotCollection=core.collections.impostazioni;
+              const capCollection=core.collections.capacita;
+              const snap=await f.getDocs(f.collection(core.db,`${base}/${slotCollection}`));
+              const slots=[]; snap.forEach(d=>slots.push({id:d.id,...d.data()}));
+              const targets=[{dateStr:'06/11/2026',day:'Venerdì',key:'20261106'},{dateStr:'20/11/2026',day:'Venerdì',key:'20261120'}];
+              const slug=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,45);
+              let created=0,updated=0;
+              for(const indirizzo of core.addresses){
+                await f.setDoc(f.doc(core.db,`${base}/${capCollection}/${indirizzo}`),{indirizzo,postiMax:25,updatedAt:Date.now()},{merge:true});
+                for(const t of targets){
+                  const matches=slots.filter(s=>s.indirizzo===indirizzo && String(s.dateStr||'').trim()===t.dateStr);
+                  if(matches.length){
+                    for(const s of matches){
+                      await f.setDoc(f.doc(core.db,`${base}/${slotCollection}/${s.id}`),{id:s.id,indirizzo,day:t.day,dateStr:t.dateStr,time:'14:30 - 16:30',postiMax:25,updatedAt:Date.now()},{merge:true});
+                      updated++;
+                    }
+                  }else{
+                    const id=`MS-${t.key}-${slug(indirizzo)}`;
+                    await f.setDoc(f.doc(core.db,`${base}/${slotCollection}/${id}`),{id,indirizzo,day:t.day,dateStr:t.dateStr,time:'14:30 - 16:30',postiMax:25,createdAt:Date.now(),updatedAt:Date.now(),source:'configurazione_commissione'},{merge:true});
+                    created++;
+                  }
+                }
+              }
+              return {addresses:core.addresses.length,created,updated};
+            });
+            console.log('NORMALIZE_RESULT',JSON.stringify(result));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
