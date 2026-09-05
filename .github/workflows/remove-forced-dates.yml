@@ -1,0 +1,57 @@
+name: Remove forced MiniStage dates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/remove-forced-dates.yml
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove only forced November slots
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/site.log 2>&1 &
+          sleep 2
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            await page.goto('http://127.0.0.1:8000/?cleanup=forced-dates',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__miniStageCore?.db && window.firebaseImports?.getDocs && window.firebaseImports?.deleteDoc,{timeout:25000});
+            await page.waitForFunction(()=>/SISTEMA CONNESSO/i.test(document.getElementById('conn-badge')?.textContent||''),{timeout:20000});
+            const result=await page.evaluate(async()=>{
+              const f=window.firebaseImports, core=window.__miniStageCore;
+              const root=n=>`artifacts/${core.appId}/public/data/${n}`;
+              const slotSnap=await f.getDocs(f.collection(core.db,root(core.collections.impostazioni)));
+              const bookingSnap=await f.getDocs(f.collection(core.db,root(core.collections.prenotazioni)));
+              const slots=[]; slotSnap.forEach(d=>slots.push({docId:d.id,...d.data()}));
+              const bookings=[]; bookingSnap.forEach(d=>bookings.push({docId:d.id,...d.data()}));
+              const targets=slots.filter(s=>s.isoDate==='2026-11-06'||s.isoDate==='2026-11-20'||s.dateStr==='06/11/2026'||s.dateStr==='20/11/2026');
+              const blockers=targets.flatMap(s=>bookings.filter(b=>b.slotId===(s.id||s.docId)&&b.type!=='cancellazione').map(b=>({slot:s.id||s.docId,code:b.code,type:b.type})));
+              if(blockers.length) return {deleted:0,targets:targets.length,blockers};
+              for(const s of targets) await f.deleteDoc(f.doc(core.db,`${root(core.collections.impostazioni)}/${s.docId}`));
+              const verify=await f.getDocs(f.collection(core.db,root(core.collections.impostazioni)));
+              let remaining=0; verify.forEach(d=>{const s=d.data();if(s.isoDate==='2026-11-06'||s.isoDate==='2026-11-20'||s.dateStr==='06/11/2026'||s.dateStr==='20/11/2026')remaining++;});
+              return {deleted:targets.length,targets:targets.length,blockers:[],remaining};
+            });
+            console.log('FORCED_DATE_CLEANUP',JSON.stringify(result));
+            if(result.blockers?.length) throw new Error('Prenotazioni attive presenti: '+JSON.stringify(result.blockers));
+            if(result.remaining) throw new Error('Date automatiche ancora presenti: '+result.remaining);
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
