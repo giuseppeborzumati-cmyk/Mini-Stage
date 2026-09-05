@@ -1,0 +1,113 @@
+name: Verify current MiniStage
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check monolith syntax and link
+        run: |
+          node --check ministage-complete.js
+          grep -q '<script src="ministage-complete.js"></script>' index.html
+      - name: Install browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Start site
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/ministage-http.log 2>&1 &
+          sleep 2
+      - name: Verify UI and Firebase state without writing bookings
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const assert=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            page.setDefaultTimeout(10000);
+            const pageErrors=[];
+            page.on('pageerror',e=>pageErrors.push(e.message));
+            await page.goto('http://127.0.0.1:8000/?verify=current',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.version==='2026.09-clean-monolith-v1',{timeout:20000});
+            await page.waitForFunction(()=>!document.getElementById('view-home').classList.contains('hidden'),{timeout:12000});
+
+            // Recupera
+            await page.getByRole('button',{name:'Recupera Prenotazione'}).click();
+            await page.waitForFunction(()=>!document.getElementById('manage-booking-modal').classList.contains('hidden'));
+            await page.evaluate(()=>window.closeManageBookingBookingModal());
+
+            // Cancella
+            await page.getByRole('button',{name:'Cancella Prenotazione'}).click();
+            await page.waitForFunction(()=>!document.getElementById('manage-booking-modal').classList.contains('hidden'));
+            await page.evaluate(()=>window.closeManageBookingBookingModal());
+
+            // Funzioni aggiuntive richieste
+            const funcs=await page.evaluate(()=>({
+              wait:typeof window.openWaitlistModal,
+              classPdf:typeof window.downloadClassListPdf,
+              allPdf:typeof window.downloadAllClassListsPdf,
+              waitPdf:typeof window.downloadWaitlistPdf,
+              scanner:typeof window.createSmartphoneScannerLink
+            }));
+            console.log('FUNCTIONS',funcs);
+            Object.entries(funcs).forEach(([k,v])=>assert(v==='function',`Funzione mancante: ${k}`));
+
+            // Date e capienze lette da Firebase / renderizzate
+            await page.waitForFunction(()=>/06\/11\/2026|6\/11\/2026/.test(document.body.innerText)&&/20\/11\/2026/.test(document.body.innerText),{timeout:20000});
+            const dates=await page.evaluate(()=>{
+              const cards=[...document.querySelectorAll('#view-home .p-3.bg-white')].filter(c=>/06\/11\/2026|6\/11\/2026|20\/11\/2026/.test(c.innerText||''));
+              return {
+                count:cards.length,
+                withAction:cards.filter(c=>[...c.querySelectorAll('button,span')].some(b=>/Prenota|Lista d.attesa|Completo/i.test(b.textContent||''))).length,
+                cap25:cards.filter(c=>/\/\s*25\s*iscritti/i.test(c.innerText||'')).length,
+                texts:cards.map(c=>(c.innerText||'').replace(/\n/g,' | '))
+              };
+            });
+            console.log('DATE_STATE',JSON.stringify(dates));
+            assert(dates.count>=10,'Non risultano entrambe le date per i percorsi MiniStage');
+            assert(dates.withAction===dates.count,'Alcune date non hanno un’azione disponibile');
+            assert(dates.cap25===dates.count,'Alcune date non risultano configurate a 25 posti');
+
+            // Apri un modulo senza confermare/salvare
+            const opened=await page.evaluate(()=>{
+              const cards=[...document.querySelectorAll('#view-home .p-3.bg-white')];
+              const card=cards.find(c=>/06\/11\/2026|6\/11\/2026|20\/11\/2026/.test(c.innerText||''));
+              const btn=[...card.querySelectorAll('button')].find(b=>/Prenota|Lista d.attesa/i.test(b.textContent||''));
+              if(btn){btn.click();return true}
+              const slot=window.__miniStageCore?.getSlots?.().find(s=>/06\/11\/2026|6\/11\/2026|20\/11\/2026/.test(String(s.dateStr||'')));
+              if(slot){window.openBookingModal(slot.id,slot.indirizzo,slot.day,slot.dateStr,slot.time);return true}
+              return false;
+            });
+            assert(opened,'Impossibile aprire il modulo MiniStage');
+            await page.waitForFunction(()=>!document.getElementById('booking-modal').classList.contains('hidden'));
+            await page.evaluate(()=>window.closeModal());
+
+            // Commissione
+            await page.getByRole('button',{name:/Accesso Commissione Orientamento/i}).click();
+            await page.waitForFunction(()=>!document.getElementById('view-admin').classList.contains('hidden'));
+            await page.locator('#admin-password').fill('orientamento2025');
+            await page.getByRole('button',{name:'Entra nella Dashboard'}).click();
+            await page.waitForFunction(()=>!document.getElementById('admin-dashboard').classList.contains('hidden'));
+            await page.waitForSelector('#mini-complete-admin',{timeout:8000});
+            assert(await page.getByRole('button',{name:'PDF tutte le classi'}).count()>=1,'PDF tutte classi assente');
+            assert(await page.getByRole('button',{name:'PDF iscrizioni con riserva'}).count()>=1,'PDF riserve assente');
+            assert(await page.locator('#mini-class-pdf-buttons button').count()>=5,'PDF per classe incompleti');
+            assert(await page.locator('#slot-management-list tr').count()>=10,'Gestione calendario non caricata');
+
+            console.log('PAGE_ERRORS',pageErrors);
+            assert(pageErrors.length===0,'Errori JavaScript non gestiti: '+pageErrors.join(' | '));
+            console.log('MINISTAGE_CURRENT_VERIFY_OK');
+            await browser.close();
+          })().catch(e=>{console.error('MINISTAGE_CURRENT_VERIFY_FAIL',e);process.exit(1)});
+          NODE
