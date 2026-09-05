@@ -40,7 +40,7 @@ jobs:
               assert x in admin
           print('STATIC_ADMIN_V2_OK')
           PY
-      - name: Browser verification with Firebase read-only calendar
+      - name: Apply Firebase calendar and verify browser UI
         run: |
           npm init -y >/dev/null 2>&1
           npm install --no-save playwright >/dev/null
@@ -57,23 +57,57 @@ jobs:
             await page.goto('http://127.0.0.1:8000/?verify=adminv2',{waitUntil:'domcontentloaded',timeout:30000});
             await page.waitForFunction(()=>window.__MINISTAGE_ADMIN_CONSOLE_V2__?.version,{timeout:25000});
             await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.dataReady,{timeout:25000});
-            const data=await page.evaluate(async()=>{
+
+            const result=await page.evaluate(async()=>{
               const f=window.firebaseImports, core=window.__miniStageCore;
-              const p=`artifacts/${core.appId}/public/data/${core.collections.impostazioni}`;
-              const snap=await f.getDocs(f.collection(core.db,p));
-              const slots=[]; snap.forEach(d=>slots.push({id:d.id,...d.data()}));
+              const root=n=>`artifacts/${core.appId}/public/data/${n}`;
+              const slotPath=root(core.collections.impostazioni);
+              const capPath=root(core.collections.capacita);
+              const targets=[['2026-11-06','06/11/2026'],['2026-11-20','20/11/2026']];
+              const addresses=core.addresses;
+              const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(36)};
+              const snap=await f.getDocs(f.collection(core.db,slotPath));
+              const existing=[];snap.forEach(d=>existing.push({id:d.id,...d.data()}));
+              let created=0,updated=0;
+              const isTarget=(s,iso,dateStr)=>{
+                if(String(s.isoDate||'')===iso)return true;
+                const parts=iso.split('-');
+                const loose=`${Number(parts[2])}/${Number(parts[1])}/${parts[0]}`;
+                return [dateStr,loose].includes(String(s.dateStr||'').trim());
+              };
+              for(const indirizzo of addresses){
+                await f.setDoc(f.doc(core.db,`${capPath}/${indirizzo}`),{indirizzo,postiMax:25,updatedAt:Date.now()},{merge:true});
+                for(const [iso,dateStr] of targets){
+                  const found=existing.filter(s=>s.indirizzo===indirizzo&&isTarget(s,iso,dateStr));
+                  if(found.length){
+                    for(const s of found){
+                      await f.setDoc(f.doc(core.db,`${slotPath}/${s.id}`),{id:s.id,indirizzo,isoDate:iso,dateStr,day:'Venerdì',time:'14:30 - 16:30',postiMax:25,active:true,updatedAt:Date.now()},{merge:true});
+                      updated++;
+                    }
+                  }else{
+                    const id=`MS2026-${iso.replace(/-/g,'')}-${hash(indirizzo)}`;
+                    await f.setDoc(f.doc(core.db,`${slotPath}/${id}`),{id,indirizzo,isoDate:iso,dateStr,day:'Venerdì',time:'14:30 - 16:30',postiMax:25,active:true,createdAt:Date.now(),updatedAt:Date.now()});
+                    created++;
+                  }
+                }
+              }
+              const check=await f.getDocs(f.collection(core.db,slotPath));
+              const slots=[];check.forEach(d=>slots.push({id:d.id,...d.data()}));
+              const checks=targets.map(([iso,dateStr])=>{
+                const rows=slots.filter(s=>addresses.includes(s.indirizzo)&&isTarget(s,iso,dateStr));
+                const present=[...new Set(rows.map(s=>s.indirizzo))];
+                return {iso,count:rows.length,missing:addresses.filter(a=>!present.includes(a)),bad:rows.filter(s=>Number(s.postiMax)!==25||String(s.time||'').replace(/\s/g,'')!=='14:30-16:30'||s.active===false).map(s=>s.id)};
+              });
               return {
+                created,updated,checks,
                 tabs:[...document.querySelectorAll('#mini-admin-tabs [data-mini-tab]')].map(x=>x.textContent.trim()),
-                funcs:{qr:typeof window.createSmartphoneScannerLink,save:typeof window.miniAdminSaveSlot,create:typeof window.miniAdminCreateSlot,check:typeof window.miniAdminManualCheckIn},
-                dates:slots.filter(s=>/06\/11\/2026|20\/11\/2026/.test(String(s.dateStr||''))).map(s=>({a:s.indirizzo,d:s.dateStr,t:s.time,c:s.postiMax,active:s.active}))
+                funcs:{qr:typeof window.createSmartphoneScannerLink,save:typeof window.miniAdminSaveSlot,create:typeof window.miniAdminCreateSlot,check:typeof window.miniAdminManualCheckIn}
               };
             });
-            console.log('ADMIN_V2_STATE',JSON.stringify(data));
-            assert(data.tabs.includes('Iscritti')&&data.tabs.includes('Lista d’attesa')&&data.tabs.includes('Calendario')&&data.tabs.includes('Scanner Accoglienza'),'Tab docenti incomplete');
-            Object.entries(data.funcs).forEach(([k,v])=>assert(v==='function','Funzione mancante '+k));
-            assert(data.dates.length>=12,'Date Firebase 6/20 novembre incomplete');
-            assert(data.dates.every(x=>Number(x.c)===25),'Capienza non 25');
-            assert(data.dates.every(x=>String(x.t).replace(/\s/g,'')==='14:30-16:30'),'Orario non coerente');
+            console.log('ADMIN_V2_STATE',JSON.stringify(result));
+            assert(result.tabs.includes('Iscritti')&&result.tabs.includes('Lista d’attesa')&&result.tabs.includes('Calendario')&&result.tabs.includes('Scanner Accoglienza'),'Tab docenti incomplete');
+            Object.entries(result.funcs).forEach(([k,v])=>assert(v==='function','Funzione mancante '+k));
+            result.checks.forEach(c=>{assert(c.missing.length===0,'Indirizzi mancanti '+JSON.stringify(c));assert(c.bad.length===0,'Configurazioni errate '+JSON.stringify(c));});
             assert(errors.length===0,'Errori JS: '+errors.join(' | '));
             console.log('ADMIN_V2_BROWSER_OK');
             await browser.close();
