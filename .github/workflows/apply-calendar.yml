@@ -1,0 +1,62 @@
+name: Apply MiniStage calendar
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-calendar.yml']
+permissions:
+  contents: read
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/http.log 2>&1 &
+          sleep 2
+      - name: Apply Firebase calendar
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage();
+            await page.goto('http://127.0.0.1:8000/',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.version && window.__miniStageCore?.db && window.firebaseImports?.setDoc,{timeout:25000});
+            await page.waitForFunction(()=>/SISTEMA CONNESSO/i.test(document.getElementById('conn-badge')?.textContent||''),{timeout:20000});
+            const result=await page.evaluate(async()=>{
+              const f=window.firebaseImports, core=window.__miniStageCore;
+              const root=n=>`artifacts/${core.appId}/public/data/${n}`;
+              const addresses=core.addresses;
+              const dates=[['2026-11-06','06/11/2026'],['2026-11-20','20/11/2026']];
+              const slots=[];
+              const snap=await f.getDocs(f.collection(core.db,root(core.collections.impostazioni)));
+              snap.forEach(d=>slots.push({id:d.id,...d.data()}));
+              const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(36)};
+              let created=0,updated=0;
+              for(const indirizzo of addresses){
+                await f.setDoc(f.doc(core.db,`${root(core.collections.capacita)}/${indirizzo}`),{indirizzo,postiMax:25,updatedAt:Date.now()},{merge:true});
+                for(const [iso,dateStr] of dates){
+                  const found=slots.filter(s=>s.indirizzo===indirizzo&&(s.isoDate===iso||s.dateStr===dateStr));
+                  if(found.length){
+                    for(const s of found){await f.setDoc(f.doc(core.db,`${root(core.collections.impostazioni)}/${s.id}`),{isoDate:iso,dateStr,day:'Venerdì',time:'14:30 - 16:30',postiMax:25,active:true,updatedAt:Date.now()},{merge:true});updated++;}
+                  }else{
+                    const id=`MS2026-${iso.replace(/-/g,'')}-${hash(indirizzo)}`;
+                    await f.setDoc(f.doc(core.db,`${root(core.collections.impostazioni)}/${id}`),{id,indirizzo,isoDate:iso,dateStr,day:'Venerdì',time:'14:30 - 16:30',postiMax:25,active:true,createdAt:Date.now(),updatedAt:Date.now()},{merge:true});created++;
+                  }
+                }
+              }
+              const rows=[];const check=await f.getDocs(f.collection(core.db,root(core.collections.impostazioni)));check.forEach(d=>rows.push({id:d.id,...d.data()}));
+              return {created,updated,checks:dates.map(([iso,dateStr])=>{const r=rows.filter(x=>addresses.includes(x.indirizzo)&&(x.isoDate===iso||x.dateStr===dateStr));const present=[...new Set(r.map(x=>x.indirizzo))];return {iso,count:r.length,missing:addresses.filter(a=>!present.includes(a)),bad:r.filter(x=>Number(x.postiMax)!==25||String(x.time||'').replace(/\s/g,'')!=='14:30-16:30'||x.active===false).map(x=>x.id)}})};
+            });
+            console.log('CALENDAR_RESULT',JSON.stringify(result));
+            for(const c of result.checks){if(c.missing.length||c.bad.length)throw new Error(JSON.stringify(c));}
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
