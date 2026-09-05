@@ -1,0 +1,53 @@
+name: MiniStage final verify
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: node --check ministage-autorizzazione.js
+      - name: Install browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Start site
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/http.log 2>&1 &
+          sleep 2
+      - name: Verify UI and Firebase data without creating bookings
+        run: |
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const assert=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            page.setDefaultTimeout(10000);
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8000/?verify=final',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_UNIFIED__?.version==='2026-unified-v1',{timeout:20000});
+            await page.waitForFunction(()=>!document.getElementById('view-home').classList.contains('hidden'),{timeout:12000});
+            await page.getByRole('button',{name:'Recupera Prenotazione'}).click(); await page.waitForFunction(()=>!document.getElementById('manage-booking-modal').classList.contains('hidden')); await page.evaluate(()=>window.closeManageBookingBookingModal());
+            await page.getByRole('button',{name:'Cancella Prenotazione'}).click(); await page.waitForFunction(()=>!document.getElementById('manage-booking-modal').classList.contains('hidden')); await page.evaluate(()=>window.closeManageBookingBookingModal());
+            await page.waitForFunction(()=>/06\/11\/2026|6\/11\/2026/.test(document.body.innerText)&&/20\/11\/2026/.test(document.body.innerText),{timeout:20000});
+            const d=await page.evaluate(()=>{const cards=[...document.querySelectorAll('#view-home .p-3.bg-white')].filter(x=>/06\/11\/2026|6\/11\/2026|20\/11\/2026/.test(x.innerText||''));return{count:cards.length,actions:cards.filter(c=>[...c.querySelectorAll('button')].some(b=>/Prenota|Lista d.attesa/i.test(b.textContent||''))).length,cap25:cards.filter(c=>/\/ 25 iscritti/.test(c.innerText||'')).length}});
+            console.log('DATE_STATE',d); assert(d.count>=10,'Date mancanti'); assert(d.actions===d.count,'Azioni mancanti'); assert(d.cap25===d.count,'Capienza diversa da 25');
+            const opened=await page.evaluate(()=>{const card=[...document.querySelectorAll('#view-home .p-3.bg-white')].find(c=>/06\/11\/2026|6\/11\/2026|20\/11\/2026/.test(c.innerText||''));const btn=[...card.querySelectorAll('button')].find(b=>/Prenota|Lista d.attesa/i.test(b.textContent||''));if(!btn)return false;btn.click();return true}); assert(opened,'Modulo prenotazione non apribile'); await page.waitForFunction(()=>!document.getElementById('booking-modal').classList.contains('hidden')); await page.evaluate(()=>window.closeModal());
+            await page.getByRole('button',{name:/Accesso Commissione Orientamento/i}).click(); await page.waitForFunction(()=>!document.getElementById('view-admin').classList.contains('hidden')); await page.locator('#admin-password').fill('orientamento2025'); await page.getByRole('button',{name:'Entra nella Dashboard'}).click(); await page.waitForFunction(()=>!document.getElementById('admin-dashboard').classList.contains('hidden'));
+            await page.waitForFunction(()=>document.querySelectorAll('#unified-calendar-rows tr').length>=10,{timeout:10000});
+            assert(await page.locator('#unified-wait-pdf').count()===1,'PDF lista attesa assente'); assert(await page.locator('#unified-all-pdf').count()===1,'PDF classi assente'); assert(await page.locator('#unified-class-config input').count()===5,'Classi incomplete');
+            console.log('PAGE_ERRORS',errors); assert(errors.length===0,'Errori JS: '+errors.join(' | '));
+            console.log('MINISTAGE_FINAL_VERIFY_OK'); await browser.close();
+          })().catch(e=>{console.error('MINISTAGE_FINAL_VERIFY_FAIL',e);process.exit(1)});
+          NODE
