@@ -1,0 +1,37 @@
+name: Apply MiniStage stability fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - patch-stability.py
+      - .github/workflows/apply-stability.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch module
+        run: python3 patch-stability.py
+      - name: Verify syntax
+        run: |
+          node --check ministage-complete.js
+          grep -q "uiReady=true" ministage-complete.js
+          grep -q "dataReady=true" ministage-complete.js
+      - name: Commit fix
+        run: |
+          rm -f patch-stability.py
+          rm -f .github/workflows/apply-stability.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rende immediato e non bloccante l'avvio MiniStage"
+          git push
