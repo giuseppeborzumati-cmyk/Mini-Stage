@@ -1,4 +1,4 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -209,9 +209,21 @@
                         <span class="text-xs font-bold text-gray-400">IIS Primo Levi</span>
                     </div>
                     <h2 class="text-2xl font-black text-indigo-900">Scegli il tuo domani: partecipa ai nostri Mini-Stage!</h2>
-                    <p class="text-sm text-gray-600 leading-relaxed">
-                        I nostri mini-stage offrono ai ragazzi di terza media l'opportunità di assistere alle lezioni curricolari, conoscere i professori e vivere l'ambiente scolastico del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto.
-                    </p>
+                    <div id="ministage-description" class="mt-3 text-sm text-gray-600 leading-relaxed space-y-2">
+                        <h3 class="text-base font-black text-indigo-900">Descrizione dei MiniStage</h3>
+                        <p>Partecipa ai nostri <strong>MiniStage</strong>, per vivere da vicino l’esperienza didattica della nostra scuola e conoscere la nostra offerta formativa!</p>
+                        <ul class="space-y-1.5 list-disc pl-5">
+                            <li><strong>Struttura delle attività:</strong> parteciperai a lezioni pratiche o esperienziali della durata di <strong>2 ore</strong> (dalle 14:30 alle 16:30), tenute dai <strong>docenti delle materie d'indirizzo</strong>.</li>
+                            <li><strong>Accoglienza:</strong> l'accoglienza degli studenti si terrà nell'atrio della scuola <strong>15 minuti prima</strong> dell'inizio dell'attività (ore 14:15).</li>
+                            <li><strong>Gruppi e Posti Limitati:</strong> le classi saranno formate da un massimo di <strong>25 studenti</strong> per garantire a ciascuno il massimo supporto e coinvolgimento.</li>
+                            <li><strong>Conferma dell'iscrizione:</strong> una volta completata la prenotazione, riceverai una <strong>e-mail di conferma</strong> con l'indicazione della classe assegnata.</li>
+                        </ul>
+                        <div class="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+                            <p><strong>Orario:</strong> 14:30 – 16:30</p>
+                            <p class="text-xs text-indigo-700"><em>Accoglienza a partire dalle 14:15 nell'atrio dell'istituto.</em></p>
+                        </div>
+                        <p class="mt-2"><strong>Disdetta / Annullamento:</strong> in caso di impossibilità a partecipare, ti chiediamo gentilmente di annullare tempestivamente la prenotazione tramite questo sito, per consentire ad altri studenti interessati di scorrere la lista d'attesa e prendere parte all'evento.</p>
+                    </div>
                 </div>
             </div>
 
@@ -229,6 +241,18 @@
                             <span class="text-[9px] text-indigo-500 font-bold tracking-wider uppercase">Liceo</span>
                         </h4>
                         <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-liceo"></div>
+                    </div>
+
+                    <!-- Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica -->
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                                Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica
+                            </span>
+                            <span class="text-[9px] text-emerald-600 font-bold tracking-wider uppercase">Liceo</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-curvatura-economica"></div>
                     </div>
 
                     <!-- 2. RIM -->
@@ -268,13 +292,13 @@
                     </div>
 
                     <!-- 5. Sistema Moda -->
-                    <div class="glass-card p-4 flex flex-col h-[260px] md:col-span-2 max-w-2xl mx-auto w-full">
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
                         <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
                             <span class="flex items-center">
                                 <span class="w-2.5 h-2.5 rounded-full bg-pink-500 mr-2 animate-pulse"></span>
-                                Sistema Moda
+                                Sistema Moda - Istituto Tecnico
                             </span>
-                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Professionale</span>
+                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Tecnico</span>
                         </h4>
                         <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-moda"></div>
                     </div>
@@ -732,6 +756,7 @@
 
         const INDIRIZZI_MAPPING = [
             "Liceo Scientifico - Scienze Applicate",
+            "Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica",
             "Relazioni Internazionali per il Marketing (RIM)",
             "Logistica - Quadriennale",
             "Costruzione Ambiente e Territorio (CAT)",
@@ -740,6 +765,7 @@
 
         const CONTAINER_MAPPING = {
             "Liceo Scientifico - Scienze Applicate": "container-liceo",
+            "Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica": "container-curvatura-economica",
             "Relazioni Internazionali per il Marketing (RIM)": "container-rim",
             "Logistica - Quadriennale": "container-logistica",
             "Costruzione Ambiente e Territorio (CAT)": "container-cat",
@@ -758,6 +784,22 @@
         let chartInstance = null;
         let manageActionType = 'retrieve';
         let html5QrScanner = null;
+
+        window.__miniStageCore = {
+            db,
+            auth,
+            appId,
+            addresses: INDIRIZZI_MAPPING,
+            collections: {
+                prenotazioni: COLLECTION_PRENOTAZIONI,
+                impostazioni: COLLECTION_IMPOSTAZIONI,
+                capacita: COLLECTION_CONFIG_CAPACITA,
+                promemoria: COLLECTION_CONFIG_PROMEMORIA
+            },
+            getBookings: () => allBookings,
+            getSlots: () => stageSlots,
+            getCapacities: () => capacitiesConfig
+        };
 
         // Esposizione funzioni per l'interfaccia
         window.goToHome = function() {
@@ -870,7 +912,7 @@
                 const capSnap = await getDocs(capRef);
                 if (capSnap.empty) {
                     for (const ind of INDIRIZZI_MAPPING) {
-                        await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 5 });
+                        await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 25 });
                     }
                 }
             } catch(e) {
@@ -950,7 +992,7 @@
                 }
 
                 container.innerHTML = filteredSlots.map(slot => {
-                    const maxPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 5;
+                    const maxPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 25;
                     const booked = bookingsMap[slot.id] || 0;
                     const remaining = maxPosti - booked;
                     const percentUsed = Math.min(100, Math.round((booked / maxPosti) * 100));
@@ -1799,7 +1841,7 @@
             container.innerHTML = INDIRIZZI_MAPPING.map(ind => `
                 <div class="flex justify-between items-center text-xs">
                     <span class="font-bold text-gray-700 truncate w-3/4">${ind}</span>
-                    <input type="number" min="1" id="cap-input-${ind.replace(/\s+/g, '_')}" value="${capacitiesConfig[ind] || 5}" class="w-16 p-1.5 border rounded-lg text-center bg-white font-bold text-indigo-900">
+                    <input type="number" min="1" id="cap-input-${ind.replace(/\s+/g, '_')}" value="${capacitiesConfig[ind] || 25}" class="w-16 p-1.5 border rounded-lg text-center bg-white font-bold text-indigo-900">
                 </div>
             `).join('');
         };
@@ -1808,7 +1850,7 @@
             for (const ind of INDIRIZZI_MAPPING) {
                 const el = document.getElementById(`cap-input-${ind.replace(/\s+/g, '_')}`);
                 if (el) {
-                    const val = parseInt(el.value) || 5;
+                    const val = parseInt(el.value) || 25;
                     capacitiesConfig[ind] = val;
                     try {
                         await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`, ind), { indirizzo: ind, postiMax: val });
@@ -1835,7 +1877,7 @@
                 day: day,
                 dateStr: dateStr,
                 time: time,
-                postiMax: pmax || capacitiesConfig[ind] || 5
+                postiMax: pmax || capacitiesConfig[ind] || 25
             };
 
             try {
@@ -1858,7 +1900,7 @@
                     <td class="p-3">${s.day}</td>
                     <td class="p-3 font-mono">${s.dateStr}</td>
                     <td class="p-3 font-mono">${s.time}</td>
-                    <td class="p-3 text-center font-bold">${s.postiMax || capacitiesConfig[s.indirizzo] || 5}</td>
+                    <td class="p-3 text-center font-bold">${s.postiMax || capacitiesConfig[s.indirizzo] || 25}</td>
                     <td class="p-3 text-right">
                         <button onclick="window.deleteSlot('${s.id}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded transition">Elimina</button>
                     </td>
@@ -1992,5 +2034,6 @@
         }
 
     </script>
+    <script src="ministage-complete.js"></script>
 </body>
 </html>
