@@ -1,0 +1,1996 @@
+!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prenotazione Mini Stage Orientamento - IIS Primo Levi</title>
+    <!-- Tailwind CSS per il design moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF per la generazione immediata dei PDF delle ricevute -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Libreria per Scansione QR/Barcode nativa da Fotocamera -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Chart.js per i grafici statistici dell'area docenti -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f3e8ff 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Sfondo animato con le bolle di sapone personalizzate */
+        .bubble-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -120px;
+            background-color: rgba(255, 255, 255, 0.25);
+            background-size: 65% 65%;
+            background-repeat: no-repeat;
+            background-position: center;
+            border-radius: 50%;
+            backdrop-filter: blur(1px);
+            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.08), inset 0 0 20px rgba(255, 255, 255, 0.85);
+            animation: floatUp 15s infinite ease-in;
+            opacity: 0.16;
+            transition: opacity 0.3s;
+        }
+
+        @keyframes floatUp {
+            0 {
+                transform: translateY(0) scale(1) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.22;
+            }
+            90% {
+                opacity: 0.22;
+            }
+            100% {
+                transform: translateY(-130vh) scale(1.3) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 35px rgba(79, 70, 229, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(79, 70, 229, 0.08);
+        }
+
+        .full-screen-code {
+            font-size: 3.2rem;
+            letter-spacing: 0.15em;
+            word-break: break-all;
+            text-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+        }
+
+        /* Codice a Barre CSS simulato per l'interfaccia */
+        .barcode-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 65px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Custom Scrollbar per le tabelle compatte */
+        .compact-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .compact-scroll::-webkit-scrollbar-track {
+            background: rgba(243, 232, 255, 0.3);
+            border-radius: 4px;
+        }
+        .compact-scroll::-webkit-scrollbar-thumb {
+            background: rgba(129, 140, 248, 0.5);
+            border-radius: 4px;
+        }
+        .compact-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+
+        /* STILI SPECIFICI PER LA STAMPA */
+        @media print {
+            .print-hide, header, #view-home, #view-admin, .bubble-container, button {
+                display: none !important; 
+            }
+            #view-receipt {
+                position: static !important;
+                background-color: white !important;
+                padding: 0 !important;
+                width: 100%;
+                height: auto;
+                margin: 0;
+                box-shadow: none;
+                display: block !important;
+            }
+            #receipt-code {
+                font-size: 32pt !important;
+            }
+            .full-screen-code {
+                font-size: 32pt !important;
+                letter-spacing: normal !important;
+            }
+        }
+    </style>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        window.firebaseImports = {
+            initializeApp, getAuth, signInAnonymously, onAuthStateChanged,
+            getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, query, where, updateDoc
+        };
+    </script>
+</head>
+<body class="relative">
+
+    <!-- Sfondo Animato Bolle con Logo Levi -->
+    <div class="bubble-container" id="bubble-bg"></div>
+
+    <div id="app" class="relative z-10 flex-grow flex flex-col items-center justify-start p-4 md:p-6 min-h-screen">
+        
+        <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 px-5 glass-card mb-4 gap-4 print-hide">
+            <div class="flex items-center space-x-3">
+                <img id="header-logo" src="Levi.png" alt="Logo IIS Primo Levi" class="w-12 h-12 rounded-lg shadow-sm object-cover" onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=LEVI';">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-xl font-black text-indigo-800 leading-none">IIS Primo Levi</h1>
+                        <span id="conn-badge" class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 animate-pulse">CONNESSIONE IN CORSO...</span>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-500 mt-1">Via Briantina 68, 20831, Seregno (MB)</p>
+                    <p class="text-[9px] font-bold text-indigo-400 tracking-wider uppercase">Commissione Orientamento</p>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1.5 w-full sm:w-auto">
+                <div class="flex flex-row gap-2 w-full">
+                    <button onclick="window.openManageBookingModal('retrieve')" class="flex-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                        Recupera Prenotazione
+                    </button>
+                    <button onclick="window.openManageBookingModal('cancel')" class="flex-1 text-[11px] font-bold bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                        Cancella Prenotazione
+                    </button>
+                </div>
+                <button onclick="window.showAdminView()" class="w-full text-[11px] font-bold bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg shadow-sm transition text-center uppercase tracking-wide">
+                    Accesso Commissione Orientamento
+                </button>
+            </div>
+        </header>
+
+        <!-- Loader di avvio -->
+        <div id="loading-spinner" class="mt-20 print-hide">
+            <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+
+        <!-- Messaggi popup personalizzati -->
+        <div id="message-box" class="fixed top-4 right-4 bg-green-500 text-white p-4 rounded-xl shadow-2xl hidden transition-all duration-300 z-50 transform translate-y-2"></div>
+        
+        <div id="view-home" class="w-full max-w-6xl hidden space-y-4">
+            
+            <div class="glass-card p-5 flex flex-col md:flex-row justify-between items-center gap-4 border-l-4 border-indigo-600">
+                <div class="flex-1 text-gray-700 space-y-1.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-indigo-100 text-indigo-800 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Esperienza Immersiva Scuola-Futuro</span>
+                        <span class="text-xs font-bold text-gray-400">IIS Primo Levi</span>
+                    </div>
+                    <h2 class="text-2xl font-black text-indigo-900">Scegli il tuo domani: partecipa ai nostri Mini-Stage!</h2>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        I nostri mini-stage offrono ai ragazzi di terza media l'opportunità di assistere alle lezioni curricolari, conoscere i professori e vivere l'ambiente scolastico del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Griglia dei calendari didattici caricati da Firebase -->
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- 1. Liceo Scientifico -->
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                                Liceo Scientifico - Scienze Applicate
+                            </span>
+                            <span class="text-[9px] text-indigo-500 font-bold tracking-wider uppercase">Liceo</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-liceo"></div>
+                    </div>
+
+                    <!-- 2. RIM -->
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-500 mr-2 animate-pulse"></span>
+                                Relazioni Internazionali Marketing (RIM)
+                            </span>
+                            <span class="text-[9px] text-purple-500 font-bold tracking-wider uppercase">Tecnico</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-rim"></div>
+                    </div>
+
+                    <!-- 3. Logistica -->
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
+                                Logistica - Quadriennale
+                            </span>
+                            <span class="text-[9px] text-blue-500 font-bold tracking-wider uppercase">Tecnico</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-logistica"></div>
+                    </div>
+
+                    <!-- 4. CAT -->
+                    <div class="glass-card p-4 flex flex-col h-[260px]">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                                Costruzione Ambiente e Territorio (CAT)
+                            </span>
+                            <span class="text-[9px] text-green-500 font-bold tracking-wider uppercase">Tecnico</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-cat"></div>
+                    </div>
+
+                    <!-- 5. Sistema Moda -->
+                    <div class="glass-card p-4 flex flex-col h-[260px] md:col-span-2 max-w-2xl mx-auto w-full">
+                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span class="w-2.5 h-2.5 rounded-full bg-pink-500 mr-2 animate-pulse"></span>
+                                Sistema Moda
+                            </span>
+                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Professionale</span>
+                        </h4>
+                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-moda"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <footer class="w-full flex justify-between items-center py-3 border-t border-indigo-100/50 text-[10px] text-gray-400">
+                <p>&copy; Commissione Orientamento Primo Levi - Seregno</p>
+                <p>Sistema Convalida Digitale</p>
+            </footer>
+        </div>
+        
+        <div id="view-receipt" class="w-full h-screen fixed top-0 left-0 bg-gradient-to-tr from-indigo-50 to-purple-50 p-6 flex flex-col items-center justify-start overflow-y-auto hidden z-40">
+            <div id="email-sending-status" class="mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide">
+                <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span id="email-status-text">Generazione e invio della ricevuta email in corso...</span>
+            </div>
+
+            <h1 id="receipt-title" class="text-2xl font-extrabold text-indigo-700 text-center mb-1"></h1>
+            <p class="text-xs text-gray-500 font-semibold mb-4">Ricevuta Ufficiale - Commissione Orientamento IIS Levi</p>
+            
+            <div class="bg-white p-6 rounded-2xl w-full max-w-xl shadow-xl border border-indigo-100/40 flex flex-col items-center space-y-4">
+                
+                <!-- Codice a Barre in Stile CSS -->
+                <div class="w-full flex flex-col items-center">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Codice a Barre Accoglienza</p>
+                    <div class="barcode-container w-64" id="receipt-barcode"></div>
+                </div>
+
+                <!-- QR Code Reale per scansione tramite smartphone -->
+                <div class="flex flex-col items-center py-2">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">QR-Code Registrazione</p>
+                    <img id="receipt-qr" src="" alt="QR Code" class="w-32 h-32 border border-gray-100 p-1.5 rounded-lg bg-white shadow-sm">
+                </div>
+
+                <div class="bg-indigo-50/50 border border-indigo-100 py-2.5 px-6 rounded-xl w-full text-center">
+                    <p id="receipt-code" class="text-2xl font-mono text-indigo-900 font-black tracking-widest"></p>
+                </div>
+                
+                <p id="receipt-message" class="text-xs text-gray-600 font-medium text-center leading-relaxed"></p>
+                
+                <p class="text-[10px] text-red-600 font-bold bg-red-50 border border-red-100 px-4 py-2 rounded-lg text-center w-full">
+                    * IL DOCUMENTO DI CONFERMA È OBBLIGATORIO PORTARLO CON SÉ (STAMPATO O SU SMARTPHONE) PER ESSERE AMMESSI ALLO STAGE.
+                </p>
+
+                <div id="receipt-details" class="w-full border-t border-gray-100 pt-3 space-y-1.5 text-[11px] text-gray-700"></div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 w-full pt-2 print-hide">
+                    <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
+                        Stampa o Salva PDF
+                    </button>
+                    <button onclick="window.goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
+                        Torna alla Home
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-admin" class="w-full max-w-6xl hidden space-y-6">
+            <!-- Box Login -->
+            <div id="admin-login" class="glass-card w-full max-w-md mx-auto p-6 text-center space-y-4">
+                <h1 class="text-xl font-black text-red-700">Area Riservata Docenti</h1>
+                <p class="text-xs text-gray-500">Inserisci la chiave d'accesso docente</p>
+                <input id="admin-password" type="password" placeholder="Password Docente" class="w-full p-3 border border-red-100 rounded-xl text-center focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-inner">
+                <button onclick="window.adminLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-md text-sm">
+                    Entra nella Dashboard
+                </button>
+                <button onclick="window.goToHome()" class="text-xs text-gray-400 hover:text-indigo-600 font-bold block mx-auto transition">
+                    Torna alla Home
+                </button>
+            </div>
+
+            <!-- Dashboard Amministrativa -->
+            <div id="admin-dashboard" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h1 class="text-2xl font-black text-indigo-900">Pannello di Gestione - IIS Levi</h1>
+                        <p class="text-xs text-gray-500">Controlla le prenotazioni, invia i promemoria e distribuisci gli attestati.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.openScannerTerminal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
+                            Apri Scanner Accoglienza
+                        </button>
+                        <button onclick="window.goToHome()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-4 py-2 rounded-xl transition shadow-sm text-xs">
+                            Torna alla Home
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PUNTO ACCETTAZIONE MANUALE -->
+                <div class="glass-card p-5 border-l-4 border-indigo-600 bg-gradient-to-r from-indigo-50/20 to-white/90">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="space-y-1">
+                            <h3 class="text-md font-black text-indigo-900 flex items-center">
+                                Accettazione Rapida / Registrazione Presenza
+                            </h3>
+                            <p class="text-xs text-gray-500">Inserisci il codice prenotazione o usa uno scanner barcode collegato.</p>
+                        </div>
+                        <div class="w-full md:w-auto flex items-center space-x-2">
+                            <input id="barcode-scan-input" type="text" placeholder="Es. MS-123456" class="p-3 border border-indigo-200 rounded-xl bg-white text-xs font-mono font-bold tracking-widest text-indigo-800 uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-inner w-full md:w-64" onkeydown="window.handleBarcodeKeyPress(event)">
+                            <button onclick="window.processManualCheckIn()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition">
+                                Valida Presenza
+                            </button>
+                        </div>
+                    </div>
+                    <div id="scanner-feedback" class="mt-3 text-xs font-bold text-center hidden p-2 rounded-lg"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="glass-card p-5 col-span-1 md:col-span-2 space-y-4 border-l-4 border-purple-500 bg-purple-50/20">
+                        <h3 class="text-md font-black text-purple-900 flex items-center">
+                            Configurazione & Invio Promemoria
+                        </h3>
+                        <p class="text-xs text-gray-600">
+                            Invia una e-mail di promemoria a tutti gli studenti iscritti prima della data dello stage.
+                        </p>
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <div class="w-full sm:w-auto flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-700 whitespace-nowrap">Giorni di anticipo:</span>
+                                <input id="reminder-days-input" type="number" min="1" max="15" value="7" class="w-20 p-2.5 bg-white border border-purple-200 rounded-xl text-center font-black text-purple-950 focus:ring-1 focus:ring-purple-500">
+                            </div>
+                            <button onclick="window.saveReminderDaysConfig()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md">
+                                Salva Configurazione
+                            </button>
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-purple-100 pt-3 gap-3">
+                            <div>
+                                <p id="reminder-eligibility-count" class="text-xs font-bold text-indigo-950">Calcolo idoneità...</p>
+                            </div>
+                            <button id="btn-batch-reminders" onclick="window.sendBatchReminders()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                                Invia Promemoria a Tutti gli Idonei
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-5 col-span-1 bg-gradient-to-br from-indigo-50/20 to-white/90 border border-indigo-100/50 flex flex-col justify-between">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider text-[9px]">Promemoria Singolo</h4>
+                        <p class="text-[11px] text-gray-500">Invia mail inserendo direttamente il codice prenotazione:</p>
+                        <div class="space-y-2 mt-2">
+                            <input id="input-manual-reminder-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-xl text-xs text-center font-mono font-bold uppercase focus:ring-1 focus:ring-indigo-500">
+                            <button onclick="window.sendSingleManualReminder()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
+                                Invia Mail Promemoria
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEZIONE GESTIONE ATTESTATI DI PARTECIPAZIONE (FINE MINI-STAGE) -->
+                <div class="glass-card p-5 border-l-4 border-green-500 bg-green-50/20 mt-4 space-y-4">
+                    <h3 class="text-md font-black text-green-950 flex items-center">
+                        Invio Attestati di Partecipazione (Fine Mini-Stage)
+                    </h3>
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        Al termine dei mini-stage, puoi inviare l'attestato ufficiale in formato PDF a tutti gli studenti contrassegnati come "Entrati/Accettati". L'attestato verrà generato ed inviato istantaneamente alla loro e-mail tramite lo script dedicato.
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-green-100 pt-3 gap-3">
+                        <div>
+                            <p id="certificate-eligibility-count" class="text-xs font-bold text-green-950">Calcolo idoneità attestati...</p>
+                        </div>
+                        <button id="btn-batch-certificates" onclick="window.sendBatchCertificates()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md">
+                            Invia Attestati in Blocco a Tutti gli Entrati
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="glass-card p-5 lg:col-span-1 space-y-3 bg-gradient-to-br from-indigo-50/40 to-white/90">
+                        <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Impostazione Posti (Capacità)</h3>
+                        <p class="text-[11px] text-gray-500">Modifica la capacità massima degli studenti iscritti contemporaneamente:</p>
+                        <div id="indirizzi-capacita-inputs" class="space-y-2"></div>
+                        <button onclick="window.saveCapacities()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-sm">
+                            Salva Impostazioni Posti
+                        </button>
+                    </div>
+
+                    <!-- Configuratore Aggiunta Slot -->
+                    <div class="glass-card p-5 lg:col-span-2 space-y-3">
+                        <h3 class="text-xs font-black text-indigo-900 border-b pb-1">Aggiungi Nuovo Slot Stage</h3>
+                        <form id="add-slot-form" onsubmit="window.handleAddSlot(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="sm:col-span-2">
+                                <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Indirizzo Stage</label>
+                                <select id="new-slot-indirizzo" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs" required></select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Giorno Settimana</label>
+                                <input id="new-slot-day" type="text" placeholder="Es. Lunedì" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Data (Es. 3/11)</label>
+                                <input id="new-slot-date" type="text" placeholder="Es. 3/11" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Orario (Es. 11:50-13:50)</label>
+                                <input id="new-slot-time" type="text" placeholder="Es. 11:50-13:50" class="w-full p-2.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Posti Max (Opzionale)</label>
+                                <input id="new-slot-max" type="number" placeholder="Default" min="1" class="w-1/2 p-1.5 bg-gray-50 border border-indigo-50 rounded-lg text-xs">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2.5 rounded-lg transition text-xs shadow-md">
+                                    + Aggiungi Nuovo Slot
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ELENCO SLOT ATTUALI -->
+                <div class="glass-card p-5">
+                    <h3 class="text-xs font-black text-indigo-900 mb-2 pb-1 border-b">Configurazione Calendari</h3>
+                    <div class="overflow-x-auto rounded-xl border border-indigo-50 bg-white max-h-60 overflow-y-auto compact-scroll">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-indigo-50/50 text-indigo-800 font-bold uppercase border-b border-indigo-50">
+                                    <th class="p-3">Indirizzo</th>
+                                    <th class="p-3">Giorno</th>
+                                    <th class="p-3">Data</th>
+                                    <th class="p-3">Orario</th>
+                                    <th class="p-3">Capacità</th>
+                                    <th class="p-3 text-right">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="slot-management-list" class="divide-y divide-gray-100 text-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- FILTRI ED ESPORTAZIONI -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="glass-card p-5 lg:col-span-2 space-y-3">
+                        <h3 class="text-sm font-black text-indigo-800">Filtro Iscritti</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-gray-500 mb-0.5">Indirizzo</label>
+                                <select id="filter-indirizzo" onchange="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50"></select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-gray-500 mb-0.5">Stato Presenza</label>
+                                <select id="filter-type" onchange="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50">
+                                    <option value="">Tutti</option>
+                                    <option value="prenotazione">Attive (In Attesa)</option>
+                                    <option value="entrato">Entrati (Presenza Verificata)</option>
+                                    <option value="cancellazione">Cancellate</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-gray-500 mb-0.5">Data</label>
+                                <input id="filter-date" type="text" placeholder="Es. 3/11" oninput="window.applyFilters()" class="w-full p-2 border border-gray-100 rounded-lg bg-gray-50 text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-5 flex flex-col justify-between space-y-3 text-xs">
+                        <div>
+                            <p class="font-bold text-gray-400 uppercase tracking-wider text-[9px]">Iscritti Totali</p>
+                            <p id="stat-total" class="text-3xl font-black text-indigo-800">0</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="window.exportToExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition text-[10px] shadow-sm">
+                                Esporta Elenco (.csv)
+                            </button>
+                            <button onclick="window.confirmClearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-lg transition text-[10px] border border-red-100">
+                                Svuota Database
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALISI STATISTICA GRAFICA -->
+                <div class="glass-card p-5">
+                    <h3 class="text-sm font-black text-indigo-800 mb-2">Analisi Distribuzione</h3>
+                    <div class="w-full h-48 relative">
+                        <canvas id="reservationsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ZONE DI DISTRIBUZIONE ISCRITTI -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <!-- Zona Prenotazioni Attive -->
+                    <div class="glass-card p-4 bg-gradient-to-br from-green-50/30 to-white/90 border border-green-100/40">
+                        <h3 class="text-xs font-black text-green-800 mb-1 flex items-center">
+                            Iscritti in Attesa
+                        </h3>
+                        <p class="text-[10px] text-gray-500 mb-3">Registrati non ancora entrati.</p>
+                        <div id="list-active-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
+                    </div>
+
+                    <!-- Zona Studenti Entrati -->
+                    <div class="glass-card p-4 bg-gradient-to-br from-blue-50/30 to-white/90 border border-blue-100/40">
+                        <h3 class="text-xs font-black text-blue-800 mb-1 flex items-center">
+                            Studenti Entrati (Idonei Attestato)
+                        </h3>
+                        <p class="text-[10px] text-gray-500 mb-3">Convalidati all'ingresso della scuola.</p>
+                        <div id="list-checkedin-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
+                    </div>
+
+                    <!-- Zona Cancellati -->
+                    <div class="glass-card p-4 bg-gradient-to-br from-red-50/30 to-white/90 border border-red-100/40">
+                        <h3 class="text-xs font-black text-red-800 mb-1 flex items-center">
+                            Iscrizioni Annullate
+                        </h3>
+                        <p class="text-[10px] text-gray-500 mb-3">Posizioni rimosse.</p>
+                        <div id="list-cancelled-prenotazioni" class="space-y-2.5 max-h-72 overflow-y-auto compact-scroll pr-1"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TERMINALE DI SCANSIONE WEBCAM (Area Accoglienza) -->
+    <div id="view-scanner-terminal" class="w-full max-w-4xl hidden space-y-6 mx-auto glass-card p-6 mt-6">
+        <div class="flex justify-between items-center border-b pb-3 border-gray-100">
+            <div>
+                <h2 class="text-xl font-black text-indigo-900">Terminale di Scansione Accoglienza</h2>
+                <p class="text-xs text-gray-500">Inquadra il QR Code dello studente con la webcam.</p>
+            </div>
+            <button onclick="window.closeScannerTerminal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-4 rounded-xl text-xs transition">
+                Chiudi Terminale
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+                    <div class="space-y-1">
+                        <span class="bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">Webcam</span>
+                        <h3 class="text-xs font-bold text-gray-800">Seleziona e Rileva la Telecamera</h3>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <select id="scanner-camera-select" class="p-2.5 bg-white border border-indigo-200 rounded-xl text-xs flex-grow font-bold text-indigo-900">
+                            <option value="">Rilevamento in corso...</option>
+                        </select>
+                        <button onclick="window.detectAndStartScanner()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition whitespace-nowrap shadow-md">
+                            Avvia Fotocamera
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-100 bg-gray-50 rounded-xl p-4 min-h-[250px] relative">
+                <div id="scanner-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
+                <div id="scanner-idle-placeholder" class="text-center space-y-2 p-6">
+                    <p class="text-xs font-bold text-indigo-900">Nessun segnale video.</p>
+                    <p class="text-[10px] text-gray-400">Clicca su Avvia Fotocamera per attivare lo scanner.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col h-[180px] glass-card p-4">
+            <h4 class="text-xs font-black text-indigo-800 uppercase tracking-widest mb-2 border-b pb-1">Cronologia Scansioni Correnti</h4>
+            <div id="scanner-logs-list" class="overflow-y-auto flex-grow compact-scroll space-y-2">
+                <p class="text-gray-400 italic text-[11px] text-center mt-6">In attesa di letture...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIONE PRENOTAZIONE (ANNULLA / RECUPERA) -->
+    <div id="manage-booking-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-indigo-50">
+            <h3 id="manage-modal-title" class="text-lg font-black text-indigo-800 mb-1"></h3>
+            <p class="text-xs text-gray-500 mb-4">Trova la tua iscrizione per procedere.</p>
+
+            <div class="space-y-4">
+                <div class="bg-indigo-50/30 p-3.5 rounded-xl border border-indigo-100">
+                    <label class="block text-[10px] font-extrabold text-indigo-700 uppercase mb-1">Cerca tramite Codice</label>
+                    <input id="input-search-code" type="text" placeholder="Es. MS-123456" class="w-full p-2.5 border border-indigo-100 rounded-lg text-xs font-mono font-bold uppercase text-center focus:ring-1 focus:ring-indigo-500">
+                </div>
+
+                <div class="text-center font-bold text-xs text-gray-400">OPPURE</div>
+
+                <div class="bg-purple-50/30 p-3.5 rounded-xl border border-purple-100">
+                    <label class="block text-[10px] font-extrabold text-purple-700 uppercase mb-1">Cerca con i tuoi Dati</label>
+                    <input id="input-search-name" type="text" placeholder="Nome e Cognome Studente" class="w-full p-2.5 mb-2 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
+                    <input id="input-search-email" type="email" placeholder="Email utilizzata" class="w-full p-2.5 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="window.closeManageBookingBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
+                    Chiudi
+                </button>
+                <button id="btn-submit-action" onclick="window.searchAndHandleBooking()" class="text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ISCRIZIONE -->
+    <div id="booking-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white/95 p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-indigo-50">
+            <h3 class="text-lg font-black text-indigo-700 mb-1">Modulo di Iscrizione Mini-Stage</h3>
+            <p id="modal-slot-info" class="text-xs text-gray-500 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100"></p>
+            
+            <input type="hidden" id="modal-slot-id">
+            <input type="hidden" id="modal-stage-day">
+            <input type="hidden" id="modal-stage-date">
+            <input type="hidden" id="modal-stage-time">
+            <input type="hidden" id="modal-indirizzo">
+
+            <div class="space-y-3">
+                <input type="text" id="modal-nome" placeholder="Nome e Cognome dello Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <input type="text" id="modal-scuola" placeholder="Scuola di Provenienza (Terza Media)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <input type="email" id="modal-email" placeholder="Email del Genitore o Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <input type="tel" id="modal-cellulare" placeholder="Numero di Cellulare (Genitore)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="window.closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition text-xs">
+                    Annulla
+                </button>
+                <button onclick="window.confirmBooking()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md">
+                    Conferma Iscrizione
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, runTransaction, onSnapshot, updateDoc } = window.firebaseImports;
+
+        const ADMIN_PASSWORD = 'orientamento2025'; 
+        const COLLECTION_PRENOTAZIONI = 'prenotazioni_v2'; 
+        const COLLECTION_IMPOSTAZIONI = 'impostazioni_stage';
+        const COLLECTION_CONFIG_CAPACITA = 'config_capacita';
+        const COLLECTION_CONFIG_PROMEMORIA = 'config_promemoria';
+        
+        // Link Google Apps Script
+        const EMAIL_SCRIPT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec';
+        const CANCELLATION_SCRIPT_URL = 'https://script.google.com/macros/s/AKfwcbw1C_uoalaFlcidMvhqz9zMxSXwqj1nVMo7bv3IGYbHis0aum-qoEzpA-Z2PDacgXYLbg/exec';
+        const REMINDER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytiWMb5UgZrpymmzrPR5VPwbtbcGBmDyPsp7EfC3ShGk_pXl_4Zp6630eTF7cPPbOUJQ/exec';
+        const CERTIFICATE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0IExcsXnFcwCYnT-IaVHHXn0FNoZQzd9YZvJyqL9cJZ4Hsp8xjHpV1XIlwrAQ63zlRQ/exec';
+
+        // Configurazione Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRgKN3N16EGLZ2JZXMQPxJJRpq_KIwWbw",
+            authDomain: "ministage-2eea5.firebaseapp.com",
+            projectId: "ministage-2eea5",
+            storageBucket: "ministage-2eea5.firebasestorage.app",
+            messagingSenderId: "593206732421",
+            appId: "1:593206732421:web:ff7874d55250ac5d7aebec",
+            measurementId: "G-YQVGCYB4WJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ClJzJkLPS6LWHAzKjLQe';
+
+        const INDIRIZZI_MAPPING = [
+            "Liceo Scientifico - Scienze Applicate",
+            "Relazioni Internazionali per il Marketing (RIM)",
+            "Logistica - Quadriennale",
+            "Costruzione Ambiente e Territorio (CAT)",
+            "Sistema Moda"
+        ];
+
+        const CONTAINER_MAPPING = {
+            "Liceo Scientifico - Scienze Applicate": "container-liceo",
+            "Relazioni Internazionali per il Marketing (RIM)": "container-rim",
+            "Logistica - Quadriennale": "container-logistica",
+            "Costruzione Ambiente e Territorio (CAT)": "container-cat",
+            "Sistema Moda": "container-moda"
+        };
+
+        let userId = null;
+        let isAuthReady = false;
+        let isInitialLoad = true; // Flag fondamentale per evitare bug di ritorno automatico alla Home
+
+        let allBookings = []; 
+        let stageSlots = [];  
+        let bookingsMap = {}; 
+        let capacitiesConfig = {}; 
+        let reminderDaysConfig = 7; 
+        let chartInstance = null;
+        let manageActionType = 'retrieve';
+        let html5QrScanner = null;
+
+        // Esposizione funzioni per l'interfaccia
+        window.goToHome = function() {
+            window.setView('home');
+        };
+
+        window.createBubbles = function() {
+            const bg = document.getElementById('bubble-bg');
+            if (!bg) return;
+            bg.innerHTML = '';
+            
+            const headerLogoEl = document.getElementById('header-logo');
+            const logoUrl = (headerLogoEl && headerLogoEl.src) ? headerLogoEl.src : 'Levi.png';
+
+            for (let i = 0; i < 14; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 75 + 45; 
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 100}%`;
+                bubble.style.animationDelay = `${Math.random() * 10}s`;
+                bubble.style.animationDuration = `${Math.random() * 8 + 12}s`;
+                bubble.style.backgroundImage = `url('${logoUrl}')`;
+                bg.appendChild(bubble);
+            }
+        };
+
+        window.showAdminView = function() {
+            window.setView('admin');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-login').classList.remove('hidden');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            
+            const filterIndirizzo = document.getElementById('filter-indirizzo');
+            if(filterIndirizzo) {
+                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+            const addDropdown = document.getElementById('new-slot-indirizzo');
+            if (addDropdown) {
+                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+            window.renderCapacitiesConfigInputs();
+            window.renderSlotManagementTable();
+        };
+
+        window.setView = function(viewName, data = null) {
+            const views = ['view-home', 'view-receipt', 'view-admin', 'view-scanner-terminal'];
+            views.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.classList.add('hidden');
+            });
+            
+            const activeView = document.getElementById(`view-${viewName}`);
+            if (activeView) activeView.classList.remove('hidden');
+
+            if (viewName === 'receipt' && data) {
+                window.updateReceiptView(data);
+            }
+        };
+
+        window.showMessage = function(msg, isError = false) {
+            const msgBox = document.getElementById('message-box');
+            if (!msgBox) return;
+            msgBox.textContent = msg;
+            msgBox.className = `fixed top-4 right-4 text-white p-4 rounded-xl shadow-2xl transition-all duration-300 z-50 transform translate-y-0`;
+            if (isError) {
+                msgBox.classList.add('bg-red-500');
+            } else {
+                msgBox.classList.add('bg-green-500');
+            }
+            msgBox.classList.remove('hidden');
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 4000);
+        };
+
+        window.updateStatusText = function(txt, isError = false) {
+            const badge = document.getElementById('conn-badge');
+            if(!badge) return;
+            badge.textContent = txt;
+            if(isError) {
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 animate-pulse";
+            } else {
+                badge.className = "text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-100 text-green-800 animate-pulse";
+            }
+        };
+
+        window.startFirebaseIntegration = async function() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    window.updateStatusText("SISTEMA CONNESSO");
+                    await window.verifyAndSeedDB();
+                    window.setupSnapshotListeners();
+                } else {
+                    window.updateStatusText("CONNESSIONE IN CORSO...");
+                    await signInAnonymously(auth).catch(err => {
+                        console.error("Errore autenticazione Firebase:", err);
+                        window.updateStatusText("ERRORE CONNESSIONE", true);
+                    });
+                }
+            });
+        };
+
+        window.verifyAndSeedDB = async function() {
+            try {
+                const capRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`);
+                const capSnap = await getDocs(capRef);
+                if (capSnap.empty) {
+                    for (const ind of INDIRIZZI_MAPPING) {
+                        await setDoc(doc(capRef, ind), { indirizzo: ind, postiMax: 5 });
+                    }
+                }
+            } catch(e) {
+                console.error("Errore verifica seeding database:", e);
+            }
+        };
+
+        window.setupSnapshotListeners = function() {
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`), (snap) => {
+                const caps = {};
+                snap.forEach(d => { caps[d.data().indirizzo] = d.data().postiMax; });
+                capacitiesConfig = caps;
+                window.renderStages();
+                window.renderCapacitiesConfigInputs();
+            });
+
+            onSnapshot(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`), (snap) => {
+                if (snap.exists()) {
+                    reminderDaysConfig = snap.data().daysBefore || 7;
+                    const el = document.getElementById('reminder-days-input');
+                    if (el) el.value = reminderDaysConfig;
+                    window.calculateReminderEligibility();
+                }
+            });
+
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`), (snap) => {
+                const list = [];
+                snap.forEach(d => list.push(d.data()));
+                stageSlots = list;
+                window.renderStages();
+                window.renderSlotManagementTable();
+            });
+
+            onSnapshot(collection(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`), (snap) => {
+                const list = [];
+                const bMap = {};
+                snap.forEach(d => {
+                    const b = { id: d.id, ...d.data() };
+                    list.push(b);
+                    // RILEVANTE: Sia gli studenti prenotati in attesa che quelli già "entrati" (presenti) occupano un posto!
+                    if (b.type === 'prenotazione' || b.type === 'entrato') {
+                        bMap[b.slotId] = (bMap[b.slotId] || 0) + 1;
+                    }
+                });
+                allBookings = list.sort((a, b) => b.timestamp - a.timestamp);
+                bookingsMap = bMap;
+                
+                const spinner = document.getElementById('loading-spinner');
+                if (spinner) spinner.classList.add('hidden');
+                
+                // IMPORTANTE: Cambia visualizzazione alla Home SOLO al caricamento iniziale
+                if (isInitialLoad) {
+                    window.setView('home');
+                    isInitialLoad = false;
+                }
+                
+                window.renderStages();
+                window.calculateReminderEligibility();
+                window.calculateCertificateEligibility();
+                window.applyFilters(); 
+            });
+        };
+
+        window.renderStages = function() {
+            INDIRIZZI_MAPPING.forEach(ind => {
+                const containerId = CONTAINER_MAPPING[ind];
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const filteredSlots = stageSlots.filter(s => s.indirizzo === ind);
+                if (filteredSlots.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center py-6">
+                            <p class="text-xs text-gray-400 italic">Nessun calendario registrato.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = filteredSlots.map(slot => {
+                    const maxPosti = slot.postiMax || capacitiesConfig[slot.indirizzo] || 5;
+                    const booked = bookingsMap[slot.id] || 0;
+                    const remaining = maxPosti - booked;
+                    const percentUsed = Math.min(100, Math.round((booked / maxPosti) * 100));
+                    
+                    let progressColor = "bg-green-500";
+                    let badgeColor = "bg-green-100 text-green-800";
+                    let rowBorderColor = "border-green-100";
+                    
+                    if (remaining <= 0) {
+                        progressColor = "bg-red-500";
+                        badgeColor = "bg-red-100 text-red-800";
+                        rowBorderColor = "border-red-100";
+                    } else if (remaining <= 2) {
+                        progressColor = "bg-orange-500";
+                        badgeColor = "bg-orange-100 text-orange-800";
+                        rowBorderColor = "border-orange-100";
+                    }
+
+                    const isFull = remaining <= 0;
+                    const actionButton = isFull 
+                        ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed text-center">Completo</span>`
+                        : `<button onclick="window.openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md font-sans">Prenota</button>`;
+
+                    return `
+                        <div class="p-3 bg-white border ${rowBorderColor} rounded-xl shadow-sm flex flex-col justify-between space-y-2">
+                            <div class="flex justify-between items-start">
+                                <div class="space-y-0.5">
+                                    <p class="text-xs font-black text-indigo-950">${slot.day} ${slot.dateStr}</p>
+                                    <p class="text-[11px] font-medium text-gray-500 font-mono">${slot.time}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-block text-[9px] font-bold ${badgeColor} px-2 py-0.5 rounded-full">
+                                        ${isFull ? 'Esaurito' : `${remaining} disponibili`}
+                                    </span>
+                                    <p class="text-[9px] text-gray-400 font-semibold mt-0.5">${booked} / ${maxPosti} iscritti</p>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="${progressColor} h-full transition-all duration-500" style="width: ${percentUsed}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center pt-1">
+                                <span class="text-[9px] text-indigo-400 font-extrabold tracking-wider uppercase">Ingresso Libero</span>
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        };
+
+        window.openBookingModal = function(slotId, indirizzo, day, dateStr, time) {
+            document.getElementById('modal-slot-id').value = slotId;
+            document.getElementById('modal-indirizzo').value = indirizzo;
+            document.getElementById('modal-stage-day').value = day;
+            document.getElementById('modal-stage-date').value = dateStr;
+            document.getElementById('modal-stage-time').value = time;
+
+            document.getElementById('modal-slot-info').innerHTML = `
+                <strong class="text-indigo-900">Indirizzo:</strong> ${indirizzo}<br>
+                <strong class="text-indigo-900">Data & Ora:</strong> ${day} ${dateStr} alle ${time}
+            `;
+            document.getElementById('booking-modal').classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('booking-modal').classList.add('hidden');
+            window.clearModalInputs();
+        };
+
+        window.clearModalInputs = function() {
+            document.getElementById('modal-nome').value = '';
+            document.getElementById('modal-scuola').value = '';
+            document.getElementById('modal-email').value = '';
+            document.getElementById('modal-cellulare').value = '';
+        };
+
+        window.confirmBooking = async function() {
+            const slotId = document.getElementById('modal-slot-id').value;
+            const indirizzo = document.getElementById('modal-indirizzo').value;
+            const stageDay = document.getElementById('modal-stage-day').value;
+            const stageDate = document.getElementById('modal-stage-date').value;
+            const stageTime = document.getElementById('modal-stage-time').value;
+
+            const nome = document.getElementById('modal-nome').value.trim();
+            const escuela = document.getElementById('modal-scuola').value.trim();
+            const email = document.getElementById('modal-email').value.trim();
+            const cellulare = document.getElementById('modal-cellulare').value.trim();
+
+            if (!nome || !escuela || !email || !cellulare) {
+                return window.showMessage("Tutti i campi sono obbligatori.", true);
+            }
+            
+            window.closeModal();
+            const code = "MS-" + Math.floor(100000 + Math.random() * 900000);
+            
+            const reservationData = {
+                code: code,
+                type: 'prenotazione',
+                slotId: slotId,
+                indirizzo: indirizzo,
+                stageDay: stageDay,
+                stageDate: stageDate,
+                stageTime: stageTime,
+                nome: nome,
+                scuola: escuela,
+                email: email,
+                cellulare: cellulare,
+                timestamp: Date.now(),
+                reminderSent: false,
+                certificateSent: false
+            };
+
+            // Caricamento ISTANTANEO della pagina di ricevuta senza lag o freeze
+            window.setView('receipt', { code: code, type: 'prenotazione', data: reservationData });
+            window.showMessage("Prenotazione registrata con successo!");
+
+            // Eseguiamo il salvataggio in database e l'invio della mail in background
+            setTimeout(async () => {
+                try {
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                    await setDoc(docRef, reservationData);
+                    window.sendAutomaticEmailNotification(reservationData, false);
+                } catch(e) {
+                    console.error("Errore salvataggio database cloud:", e);
+                    window.showMessage("Errore di sincronizzazione cloud, ma la ricevuta è generata.", true);
+                }
+            }, 150);
+        };
+
+        window.createBarcodeDataURL = function(text) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 300;
+            canvas.height = 80;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0,0,300,80);
+            ctx.fillStyle = '#000000';
+            
+            let x = 20;
+            ctx.fillRect(x, 5, 4, 70); x += 6;
+            ctx.fillRect(x, 5, 2, 70); x += 4;
+            for(let i=0; i<text.length; i++) {
+                let code = text.charCodeAt(i);
+                let pattern = (code * 12345).toString(2);
+                for(let j=0; j<Math.min(pattern.length, 8); j++) {
+                    let barWidth = pattern[j] === '1' ? 3 : 1;
+                    ctx.fillRect(x, 5, barWidth, 70);
+                    x += barWidth + 2;
+                }
+            }
+            ctx.fillRect(x, 5, 2, 70); x += 4;
+            ctx.fillRect(x, 5, 4, 70);
+            
+            ctx.fillStyle = '#555555';
+            ctx.font = '12px monospace';
+            ctx.textBaseline = 'bottom';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 150, 78);
+            return canvas.toDataURL();
+        };
+
+        window.drawBarcodeInPDF = function(pdfDoc, text, startX, startY) {
+            pdfDoc.setFillColor(0, 0, 0);
+            let currentX = startX;
+            for (let i = 0; i < text.length; i++) {
+                let charCode = text.charCodeAt(i);
+                let pattern = (charCode * 12345).toString(2);
+                for (let j = 0; j < Math.min(pattern.length, 8); j++) {
+                    let width = pattern[j] === '1' ? 1.0 : 0.3;
+                    pdfDoc.rect(currentX, startY, width, 14, 'F');
+                    currentX += width + 0.3;
+                }
+            }
+            pdfDoc.setFont("Helvetica", "normal");
+            pdfDoc.setFontSize(8);
+            pdfDoc.setTextColor(100, 100, 100);
+            pdfDoc.text(text, startX + 15, startY + 18);
+        };
+
+        window.updateReceiptView = function(data) {
+            const rTitle = document.getElementById('receipt-title');
+            const rCode = document.getElementById('receipt-code');
+            const rMsg = document.getElementById('receipt-message');
+            const rDetails = document.getElementById('receipt-details');
+            const rQr = document.getElementById('receipt-qr');
+            const rBarcode = document.getElementById('receipt-barcode');
+
+            rTitle.textContent = data.type === 'cancellazione' ? 'ISCRIZIONE ANNULLATA' : 'ISCRIZIONE CONFERMATA!';
+            rCode.textContent = data.code;
+
+            if (data.type === 'cancellazione') {
+                rMsg.innerHTML = `<span class="text-red-600 font-extrabold text-sm">Questa prenotazione è stata annullata.</span>`;
+                rQr.classList.add('opacity-30');
+                rBarcode.classList.add('opacity-30');
+            } else {
+                rMsg.innerHTML = `Gentile <strong>${data.data.nome}</strong>, la tua prenotazione per il mini-stage è attiva.<br>Presenta questo pass all'accoglienza dell'Istituto Levi.`;
+                rQr.classList.remove('opacity-30');
+                rBarcode.classList.remove('opacity-30');
+            }
+
+            const bcodeUrl = window.createBarcodeDataURL(data.code);
+            rBarcode.innerHTML = `<img src="${bcodeUrl}" alt="Barcode Scansione" class="h-12 object-contain">`;
+            rQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.code)}`;
+
+            rDetails.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 border-t pt-2.5 text-xs">
+                    <div><span class="text-gray-400 font-medium">Studente:</span> <strong class="text-indigo-950">${data.data.nome}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Scuola Provenienza:</span> <strong class="text-indigo-950">${data.data.scuola || 'N/A'}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Percorso Didattico:</span> <strong class="text-indigo-950">${data.data.indirizzo}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Data dello Stage:</span> <strong class="text-indigo-950">${data.data.stageDay} ${data.data.stageDate}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Orario:</span> <strong class="text-indigo-950">${data.data.stageTime}</strong></div>
+                    <div><span class="text-gray-400 font-medium">Email Registrata:</span> <strong class="text-indigo-950">${data.data.email}</strong></div>
+                </div>
+            `;
+        };
+
+        window.sendAutomaticEmailNotification = function(res, isRetrieval = false) {
+            const statusText = document.getElementById('email-status-text');
+            const statusBg = document.getElementById('email-sending-status');
+            
+            if (statusBg) {
+                statusBg.classList.remove('hidden'); // Forza la visibilità all'avvio dell'invio
+                statusBg.className = "mb-4 bg-indigo-100 text-indigo-800 text-[11px] font-bold px-4 py-2 rounded-full flex items-center space-x-2 animate-pulse shadow-sm print-hide";
+                statusText.textContent = isRetrieval ? "Rigenerazione e invio della e-mail in corso..." : "Generazione e invio della ricevuta email...";
+            }
+
+            // Usiamo un delay per permettere alla ricevuta grafica di caricarsi istantaneamente sullo schermo prima della creazione del PDF
+            setTimeout(async () => {
+                try {
+                    if (typeof window.jspdf === 'undefined') {
+                        throw new Error("Libreria PDF jsPDF non caricata.");
+                    }
+
+                    const { jsPDF } = window.jspdf;
+                    const pdfDoc = new jsPDF('p', 'mm', 'a4');
+                    
+                    pdfDoc.setFillColor(30, 27, 75);
+                    pdfDoc.rect(0, 0, 210, 38, 'F');
+                    
+                    pdfDoc.setTextColor(255, 255, 255);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.setFontSize(22);
+                    pdfDoc.text("IIS PRIMO LEVI - SEREGNO", 15, 16);
+                    pdfDoc.setFontSize(9);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text("Via Briantina 68, Seregno (MB) - Commissione Orientamento Scolastico", 15, 23);
+                    pdfDoc.text("Email: orientamento@leviseregno.edu.it | Tel: 0362 221234", 15, 28);
+                    
+                    pdfDoc.setFillColor(79, 70, 229);
+                    pdfDoc.roundedRect(148, 8, 48, 12, 2, 2, 'F');
+                    pdfDoc.setTextColor(255, 255, 255);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.setFontSize(9);
+                    pdfDoc.text(isRetrieval ? "DUPLICATO RICEVUTA" : "RICEVUTA UFFICIALE", 150, 16);
+                    
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(14);
+                    pdfDoc.text("CONFERMA PRENOTAZIONE MINI-STAGE 2026", 15, 52);
+                    
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.setLineWidth(0.5);
+                    pdfDoc.line(15, 56, 195, 56);
+                    
+                    pdfDoc.setFillColor(249, 250, 251);
+                    pdfDoc.roundedRect(15, 62, 85, 62, 3, 3, 'F');
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.roundedRect(15, 62, 85, 62, 3, 3, 'S');
+                    
+                    pdfDoc.setTextColor(79, 70, 229);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.text("DATI STUDENTE", 22, 69);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.setFontSize(8.5);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Studente:", 22, 76);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.nome, 22, 80);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Scuola di Provenienza:", 22, 87);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.scuola || "N/A", 22, 91);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Recapiti genitore:", 22, 98);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(`Cell: ${res.cellulare}`, 22, 102);
+                    pdfDoc.text(`Email: ${res.email}`, 22, 106);
+                    
+                    pdfDoc.setFillColor(245, 243, 255);
+                    pdfDoc.roundedRect(108, 62, 87, 62, 3, 3, 'F');
+                    pdfDoc.setDrawColor(221, 214, 254);
+                    pdfDoc.roundedRect(108, 62, 87, 62, 3, 3, 'S');
+                    
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("DETTAGLI MINI-STAGE", 115, 69);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.text("Percorso Didattico:", 115, 76);
+                    pdfDoc.setTextColor(79, 70, 229);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text(res.indirizzo, 115, 80);
+                    
+                    pdfDoc.setTextColor(50, 50, 50);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Giorno dello Stage:", 115, 87);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(`${res.stageDay} ${res.stageDate}`, 115, 91);
+                    
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("Orario previsto:", 115, 98);
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.text(res.stageTime, 115, 102);
+                    
+                    pdfDoc.setFillColor(243, 244, 246);
+                    pdfDoc.roundedRect(15, 132, 180, 16, 2, 2, 'F');
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("CODICE DI PRENOTAZIONE:", 25, 142);
+                    pdfDoc.setFontSize(13);
+                    pdfDoc.setFont("Courier", "bold");
+                    pdfDoc.setTextColor(220, 38, 38);
+                    pdfDoc.text(res.code, 115, 142);
+                    
+                    pdfDoc.setTextColor(30, 27, 75);
+                    pdfDoc.setFontSize(10);
+                    pdfDoc.setFont("Helvetica", "bold");
+                    pdfDoc.text("ISTRUZIONI DI ACCESSO:", 15, 158);
+                    
+                    pdfDoc.setFont("Helvetica", "normal");
+                    pdfDoc.setFontSize(8.5);
+                    pdfDoc.setTextColor(100, 100, 100);
+                    const istruzioni = [
+                        "- Presentarsi all'ingresso principale del plesso scolastico almeno 10 minuti prima dello stage.",
+                        "- Portare obbligatoriamente questa ricevuta con sé (stampata o sul proprio telefono).",
+                        "- Il personale d'accoglienza convaliderà l'ingresso scansionando il codice a barre o il QR-Code.",
+                        "- In caso di assenza, si prega di effettuare l'annullamento sul portale per liberare il posto."
+                    ];
+                    let lineY = 164;
+                    istruzioni.forEach(line => {
+                        pdfDoc.text(line, 15, lineY);
+                        lineY += 5;
+                    });
+                    
+                    pdfDoc.setDrawColor(229, 231, 235);
+                    pdfDoc.line(15, 192, 195, 192);
+                    
+                    window.drawBarcodeInPDF(pdfDoc, res.code, 15, 198);
+                    
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(res.code)}`;
+                    pdfDoc.addImage(qrUrl, 'PNG', 155, 196, 26, 26);
+                    
+                    pdfDoc.setFontSize(7.5);
+                    pdfDoc.setTextColor(150, 150, 150);
+                    pdfDoc.text("Scansione Barcode Accoglienza", 15, 230);
+                    pdfDoc.text("QR-Code Convalida", 153, 230);
+                    
+                    pdfDoc.setDrawColor(79, 70, 229);
+                    pdfDoc.line(15, 240, 195, 240);
+                    pdfDoc.text("Documento generato e approvato in tempo reale dalla Commissione Orientamento IIS Primo Levi.", 15, 246);
+                    pdfDoc.text(`Data Emissione: ${new Date().toLocaleDateString('it-IT')} - Seregno`, 15, 250);
+
+                    const dataUri = pdfDoc.output('datauristring');
+                    const base64PdfStr = dataUri.split(',')[1];
+
+                    const nameParts = res.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    const payload = {
+                        email: res.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: res.code,
+                        pdfBase64: base64PdfStr
+                    };
+
+                    if (statusText) statusText.textContent = "Spedizione via e-mail in corso...";
+
+                    fetch(EMAIL_SCRIPT_DEPLOYMENT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    }).then(() => {
+                        if (statusBg) {
+                            // Rimozione istantanea del banner di stato appena l'email viene inviata con successo
+                            statusBg.classList.add('hidden');
+                        }
+                    }).catch(err => {
+                        console.error("Errore fetch invio mail:", err);
+                        if (statusBg) {
+                            // Rimuovi il banner anche in caso di errore per evitare caricature all'infinito
+                            statusBg.classList.add('hidden');
+                        }
+                    });
+
+                } catch(e) {
+                    console.error("Errore notifica immediata email:", e);
+                    if (statusBg) {
+                        statusBg.classList.add('hidden');
+                    }
+                }
+            }, 350);
+        };
+
+        window.sendCancellationEmailNotification = async function(res) {
+            try {
+                const nameParts = res.nome.trim().split(' ');
+                const first = nameParts[0] || '';
+                const rest = nameParts.slice(1).join(' ') || '';
+
+                await fetch(CANCELLATION_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        email: res.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: res.code
+                    })
+                });
+            } catch(e) {
+                console.error("Errore invio e-mail cancellazione:", e);
+            }
+        };
+
+        window.applyFilters = function() {
+            const fIndirizzo = document.getElementById('filter-indirizzo')?.value;
+            const fType = document.getElementById('filter-type')?.value;
+            const fDate = document.getElementById('filter-date')?.value.trim();
+            
+            let filtered = allBookings;
+
+            if (fIndirizzo) {
+                filtered = filtered.filter(item => item.indirizzo === fIndirizzo);
+            }
+            if (fType) {
+                filtered = filtered.filter(item => item.type === fType);
+            } 
+            if (fDate) {
+                filtered = filtered.filter(item => item.stageDate && item.stageDate.includes(fDate));
+            }
+            
+            window.renderDashboardLists(filtered);
+            window.updateDashboardStats();
+            window.updateCharts();
+        };
+
+        window.clearFilters = function() {
+            const fIndirizzo = document.getElementById('filter-indirizzo');
+            const fType = document.getElementById('filter-type');
+            const fDate = document.getElementById('filter-date');
+            if (fIndirizzo) fIndirizzo.value = '';
+            if (fType) fType.value = '';
+            if (fDate) fDate.value = '';
+            window.applyFilters();
+        };
+
+        window.updateDashboardStats = function() {
+            const totalEl = document.getElementById('stat-total');
+            if (totalEl) {
+                totalEl.textContent = allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').length.toString();
+            }
+        };
+
+        window.renderDashboardLists = function(filteredList) {
+            const listActive = document.getElementById('list-active-prenotazioni');
+            const listChecked = document.getElementById('list-checkedin-prenotazioni');
+            const listCancelled = document.getElementById('list-cancelled-prenotazioni');
+
+            if (!listActive || !listChecked || !listCancelled) return;
+
+            const actives = filteredList.filter(b => b.type === 'prenotazione');
+            const checkeds = filteredList.filter(b => b.type === 'entrato');
+            const cancelled = filteredList.filter(b => b.type === 'cancellazione');
+
+            listActive.innerHTML = actives.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
+                    <div>
+                        <strong class="text-indigo-900">${b.nome}</strong>
+                        <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
+                    </div>
+                    <button onclick="window.checkInStudent('${b.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1 px-2.5 rounded-lg transition">
+                        Entrato
+                    </button>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessun iscritto.</p>`;
+
+            listChecked.innerHTML = checkeds.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs">
+                    <div>
+                        <strong class="text-indigo-900">${b.nome}</strong>
+                        <p class="text-[10px] text-gray-500 font-mono">${b.code} | ${b.indirizzo}</p>
+                    </div>
+                    <span class="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase">Presente</span>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4">Nessuno presente.</p>`;
+
+            listCancelled.innerHTML = cancelled.map(b => `
+                <div class="p-2.5 bg-white border border-gray-100 rounded-xl text-xs">
+                    <strong class="text-red-900">${b.nome}</strong>
+                    <p class="text-[10px] text-gray-400 font-mono">${b.code} | Annullata</p>
+                </div>
+            `).join('') || `<p class="text-gray-400 italic text-[11px] text-center py-4 font-normal">Nessun annullamento.</p>`;
+        };
+
+        window.checkInStudent = async function(code) {
+            const idx = allBookings.findIndex(b => b.code === code);
+            if (idx === -1) return window.showMessage("Iscrizione non trovata.", true);
+
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
+                await updateDoc(docRef, { type: 'entrato' });
+                window.showMessage(`Studente ${allBookings[idx].nome} segnato come ENTRATO!`);
+            } catch(e) {
+                console.error("Errore aggiornamento check-in su cloud:", e);
+                window.showMessage("Impossibile salvare sul cloud.", true);
+            }
+        };
+
+        window.openScannerTerminal = function() {
+            window.setView('scanner-terminal');
+            const logsList = document.getElementById('scanner-logs-list');
+            if (logsList) {
+                logsList.innerHTML = `<p class="text-gray-400 italic text-[11px] text-center mt-8">Nessun codice scansionato in questa sessione.</p>`;
+            }
+            window.detectCameras();
+        };
+
+        window.detectCameras = function() {
+            const select = document.getElementById('scanner-camera-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Rilevamento in corso...</option>';
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Webcam ' + d.id}</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="">Nessuna fotocamera trovata</option>';
+                }
+            }).catch(err => {
+                console.error("Errore rilevamento webcam:", err);
+                select.innerHTML = '<option value="">Errore di accesso alla webcam</option>';
+            });
+        };
+
+        window.detectAndStartScanner = async function() {
+            document.getElementById('scanner-idle-placeholder').classList.add('hidden');
+            const readerEl = document.getElementById('scanner-reader');
+            readerEl.innerHTML = '';
+
+            // Ferma eventuali istanze dello scanner precedentemente attive per sbloccare la camera
+            if (html5QrScanner) {
+                try {
+                    await html5QrScanner.stop();
+                } catch(e) {
+                    console.warn("Scanner spento o non avviato.");
+                }
+            }
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    const select = document.getElementById('scanner-camera-select');
+                    let cameraId = select && select.value ? select.value : devices[0].id;
+                    
+                    html5QrScanner = new Html5Qrcode("scanner-reader");
+                    html5QrScanner.start(
+                        cameraId, 
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            if (decodedText.startsWith("MS-")) {
+                                window.processIncomingScannedCode(decodedText);
+                            }
+                        },
+                        (errorMessage) => {}
+                    ).catch(err => {
+                        console.error("Impossibile avviare scanner", err);
+                    });
+                } else {
+                    window.showMessage("Nessuna fotocamera trovata sul dispositivo.", true);
+                }
+            }).catch(err => {
+                window.showMessage("Impossibile accedere alle fotocamere.", true);
+            });
+        };
+
+        window.closeScannerTerminal = function() {
+            if (html5QrScanner) {
+                html5QrScanner.stop().then(() => {
+                    document.getElementById('scanner-reader').innerHTML = '';
+                    document.getElementById('scanner-idle-placeholder').classList.remove('hidden');
+                }).catch(e => console.error(e));
+            }
+            window.setView('admin');
+        };
+
+        window.processIncomingScannedCode = async function(code) {
+            const feedback = document.getElementById('scanner-feedback');
+            const booking = allBookings.find(b => b.code === code);
+
+            if (!booking) {
+                window.showScannerFeedback(`Codice ${code} non trovato nel sistema.`, true);
+                return;
+            }
+
+            if (booking.type === 'entrato') {
+                window.showScannerFeedback(`Attenzione: ${booking.nome} è già stato marcato come presente.`, true);
+                return;
+            }
+
+            if (booking.type === 'cancellazione') {
+                window.showScannerFeedback(`La prenotazione per ${booking.nome} risulta precedentemente annullata.`, true);
+                return;
+            }
+
+            await window.checkInStudent(code);
+            window.showScannerFeedback(`Presente convalidato: ${booking.nome} (${booking.indirizzo})`);
+            
+            const logsList = document.getElementById('scanner-logs-list');
+            if (logsList) {
+                const logItem = document.createElement('div');
+                logItem.className = "p-1.5 bg-green-50 border border-green-200 text-green-800 rounded font-bold mb-1";
+                logItem.textContent = `[${new Date().toLocaleTimeString()}] ${code} - ${booking.nome}`;
+                if(logsList.querySelector('p')) logsList.innerHTML = '';
+                logsList.prepend(logItem);
+            }
+        };
+
+        window.showScannerFeedback = function(msg, isError = false) {
+            const fb = document.getElementById('scanner-feedback');
+            if(!fb) return;
+            fb.textContent = msg;
+            fb.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            if (isError) {
+                fb.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                fb.classList.add('bg-green-100', 'text-green-800');
+            }
+        };
+
+        window.handleBarcodeKeyPress = function(event) {
+            if (event.key === 'Enter') {
+                window.processManualCheckIn();
+            }
+        };
+
+        window.processManualCheckIn = function() {
+            const input = document.getElementById('barcode-scan-input');
+            const code = input.value.trim().toUpperCase();
+            if (!code) return;
+            window.processIncomingScannedCode(code);
+            input.value = '';
+        };
+
+        window.calculateReminderEligibility = function() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            const textEl = document.getElementById('reminder-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti idonei a ricevere il promemoria: ${eligible.length}`;
+            }
+        };
+
+        window.saveReminderDaysConfig = async function() {
+            const days = parseInt(document.getElementById('reminder-days-input').value) || 7;
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_PROMEMORIA}/settings`);
+                await setDoc(docRef, { daysBefore: days });
+                window.showMessage("Anticipo promemoria salvato su Database Cloud!");
+            } catch(e) {
+                window.showMessage("Impossibile salvare la configurazione sul cloud.", true);
+            }
+        };
+
+        window.sendBatchReminders = async function() {
+            const eligible = allBookings.filter(b => b.type === 'prenotazione' && !b.reminderSent);
+            if (eligible.length === 0) return window.showMessage("Nessuno studente idoneo al promemoria.", true);
+            
+            window.showMessage("Invio promemoria in blocco avviato...");
+            
+            for (const student of eligible) {
+                try {
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(REMINDER_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            orario: student.stageTime,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                    await updateDoc(docRef, { reminderSent: true });
+                } catch(e) {
+                    console.error("Errore promemoria per:", student.code, e);
+                }
+            }
+            
+            window.showMessage("Invio promemoria completato!");
+        };
+
+        window.sendSingleManualReminder = async function() {
+            const code = document.getElementById('input-manual-reminder-code').value.trim().toUpperCase();
+            if(!code) return window.showMessage("Inserisci un codice valido.", true);
+
+            const student = allBookings.find(b => b.code === code);
+            if(!student) return window.showMessage("Nessuna prenotazione trovata.", true);
+
+            window.showMessage(`Invio promemoria singolo a ${student.nome}...`);
+
+            try {
+                const nameParts = student.nome.trim().split(' ');
+                const first = nameParts[0] || '';
+                const rest = nameParts.slice(1).join(' ') || '';
+
+                await fetch(REMINDER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        email: student.email,
+                        nome: first,
+                        cognome: rest,
+                        codice_prenotazione: student.code,
+                        data: student.stageDate,
+                        orario: student.stageTime,
+                        attivita: student.indirizzo
+                    })
+                });
+
+                const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                await updateDoc(docRef, { reminderSent: true });
+
+                window.showMessage("Promemoria manuale inviato!");
+                document.getElementById('input-manual-reminder-code').value = '';
+            } catch(e) {
+                window.showMessage("Errore nell'invio.", true);
+            }
+        };
+
+        window.calculateCertificateEligibility = function() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            const textEl = document.getElementById('certificate-eligibility-count');
+            if (textEl) {
+                textEl.textContent = `Studenti presenti idonei all'attestato: ${eligible.length}`;
+            }
+        };
+
+        window.sendBatchCertificates = async function() {
+            const eligible = allBookings.filter(b => b.type === 'entrato' && !b.certificateSent);
+            if (eligible.length === 0) return window.showMessage("Nessuno studente presente necessita di attestato.", true);
+            
+            window.showMessage("Generazione e invio in blocco degli attestati...");
+            
+            for (const student of eligible) {
+                try {
+                    const nameParts = student.nome.trim().split(' ');
+                    const first = nameParts[0] || '';
+                    const rest = nameParts.slice(1).join(' ') || '';
+
+                    await fetch(CERTIFICATE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            email: student.email,
+                            nome: first,
+                            cognome: rest,
+                            codice_prenotazione: student.code,
+                            data: student.stageDate,
+                            attivita: student.indirizzo
+                        })
+                    });
+
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, student.code);
+                    await updateDoc(docRef, { certificateSent: true });
+                } catch(e) {
+                    console.error("Errore certificato per:", student.code, e);
+                }
+            }
+            
+            window.showMessage("Invio attestati completato!");
+        };
+
+        window.updateCharts = function() {
+            const canvas = document.getElementById('reservationsChart');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const counts = {};
+            INDIRIZZI_MAPPING.forEach(ind => counts[ind] = 0);
+            allBookings.filter(b => b.type === 'prenotazione' || b.type === 'entrato').forEach(b => {
+                if(counts[b.indirizzo] !== undefined) counts[b.indirizzo]++;
+            });
+
+            if (chartInstance) { chartInstance.destroy(); }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: INDIRIZZI_MAPPING.map(m => m.substring(0, 15) + '...'),
+                    datasets: [{
+                        label: 'Iscritti attivi',
+                        data: INDIRIZZI_MAPPING.map(ind => counts[ind]),
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        };
+
+        window.adminLogin = function() {
+            const pass = document.getElementById('admin-password').value;
+            if (pass === ADMIN_PASSWORD) {
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                window.calculateReminderEligibility();
+                window.calculateCertificateEligibility();
+                window.applyFilters();
+            } else {
+                window.showMessage("Password non corretta.", true);
+            }
+        };
+
+        window.renderCapacitiesConfigInputs = function() {
+            const container = document.getElementById('indirizzi-capacita-inputs');
+            if (!container) return;
+
+            container.innerHTML = INDIRIZZI_MAPPING.map(ind => `
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-bold text-gray-700 truncate w-3/4">${ind}</span>
+                    <input type="number" min="1" id="cap-input-${ind.replace(/\s+/g, '_')}" value="${capacitiesConfig[ind] || 5}" class="w-16 p-1.5 border rounded-lg text-center bg-white font-bold text-indigo-900">
+                </div>
+            `).join('');
+        };
+
+        window.saveCapacities = async function() {
+            for (const ind of INDIRIZZI_MAPPING) {
+                const el = document.getElementById(`cap-input-${ind.replace(/\s+/g, '_')}`);
+                if (el) {
+                    const val = parseInt(el.value) || 5;
+                    capacitiesConfig[ind] = val;
+                    try {
+                        await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_CONFIG_CAPACITA}`, ind), { indirizzo: ind, postiMax: val });
+                    } catch(e) {
+                        console.error("Errore update capacitá cloud:", e);
+                    }
+                }
+            }
+            window.showMessage("Capacità dei posti aggiornata con successo nel Cloud!");
+        };
+
+        window.handleAddSlot = async function(e) {
+            e.preventDefault();
+            const ind = document.getElementById('new-slot-indirizzo').value;
+            const day = document.getElementById('new-slot-day').value.trim();
+            const dateStr = document.getElementById('new-slot-date').value.trim();
+            const time = document.getElementById('new-slot-time').value.trim();
+            const pmax = parseInt(document.getElementById('new-slot-max').value);
+
+            const slotId = "SLOT-" + Date.now();
+            const newSlot = {
+                id: slotId,
+                indirizzo: ind,
+                day: day,
+                dateStr: dateStr,
+                time: time,
+                postiMax: pmax || capacitiesConfig[ind] || 5
+            };
+
+            try {
+                await setDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, slotId), newSlot);
+                window.showMessage("Nuovo slot aggiunto correttamente nel Cloud!");
+                document.getElementById('add-slot-form').reset();
+            } catch(err) {
+                console.error("Errore salvataggio slot:", err);
+                window.showMessage("Impossibile salvare il nuovo slot.", true);
+            }
+        };
+
+        window.renderSlotManagementTable = function() {
+            const list = document.getElementById('slot-management-list');
+            if (!list) return;
+
+            list.innerHTML = stageSlots.map(s => `
+                <tr class="border-b border-gray-50 hover:bg-indigo-50/10">
+                    <td class="p-3 font-semibold">${s.indirizzo}</td>
+                    <td class="p-3">${s.day}</td>
+                    <td class="p-3 font-mono">${s.dateStr}</td>
+                    <td class="p-3 font-mono">${s.time}</td>
+                    <td class="p-3 text-center font-bold">${s.postiMax || capacitiesConfig[s.indirizzo] || 5}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="window.deleteSlot('${s.id}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded transition">Elimina</button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        window.deleteSlot = async function(id) {
+            if (confirm("Rimuovere questo slot dal calendario?")) {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_IMPOSTAZIONI}`, id));
+                    window.showMessage("Slot rimosso dal calendario cloud.");
+                } catch(e) {
+                    window.showMessage("Impossibile rimuovere lo slot dal cloud.", true);
+                }
+            }
+        };
+
+        window.exportToExcel = function() {
+            let csv = "Codice,Studente,Email,Cellulare,Scuola,Indirizzo,Giorno,Data,Orario,Stato,PromemoriaInviato,AttestatoInviato\n";
+            allBookings.forEach(b => {
+                csv += `"${b.code}","${b.nome}","${b.email}","${b.cellulare}","${b.scuola || ''}","${b.indirizzo}","${b.stageDay}","${b.stageDate}","${b.stageTime}","${b.type}","${b.reminderSent}","${b.certificateSent}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `iscritti_ministage_levi_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.confirmClearAll = async function() {
+            if(confirm("Sei sicuro di voler svuotare interamente l'archivio iscritti? L'operazione è irreversibile.")) {
+                try {
+                    for (const b of allBookings) {
+                        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, b.code));
+                    }
+                    window.showMessage("Database iscritti cloud svuotato correttamente.");
+                } catch(e) {
+                    window.showMessage("Errore durante lo svuotamento.", true);
+                }
+            }
+        };
+
+        window.openManageBookingModal = function(type) {
+            manageActionType = type;
+            const title = document.getElementById('manage-modal-title');
+            const submitBtn = document.getElementById('btn-submit-action');
+            
+            if (type === 'cancel') {
+                title.textContent = "Cancella Prenotazione";
+                submitBtn.textContent = "Annulla la Prenotazione";
+                submitBtn.className = "bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
+            } else {
+                title.textContent = "Recupera la Prenotazione";
+                submitBtn.textContent = "Mostra Ricevuta";
+                submitBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition text-xs shadow-md";
+            }
+            
+            document.getElementById('manage-booking-modal').classList.remove('hidden');
+        };
+
+        window.closeManageBookingBookingModal = function() {
+            document.getElementById('manage-booking-modal').classList.add('hidden');
+            document.getElementById('input-search-code').value = '';
+            document.getElementById('input-search-name').value = '';
+            document.getElementById('input-search-email').value = '';
+        };
+
+        window.searchAndHandleBooking = async function() {
+            const inputCode = document.getElementById('input-search-code').value.trim().toUpperCase();
+            const inputName = document.getElementById('input-search-name').value.trim().toLowerCase();
+            const inputEmail = document.getElementById('input-search-email').value.trim().toLowerCase();
+
+            let booking = null;
+
+            if (inputCode) {
+                booking = allBookings.find(b => b.code === inputCode);
+            } else if (inputName && inputEmail) {
+                booking = allBookings.find(b => b.nome.toLowerCase().includes(inputName) && b.email.toLowerCase() === inputEmail);
+            }
+
+            if (!booking) {
+                return window.showMessage("Nessuna prenotazione trovata corrispondente ai dati inseriti.", true);
+            }
+
+            window.closeManageBookingBookingModal();
+
+            if (manageActionType === 'cancel') {
+                if (booking.type === 'cancellazione') {
+                    return window.showMessage("Questa prenotazione risulta già annullata.", true);
+                }
+                if (confirm(`Confermi di voler annullare la prenotazione per ${booking.nome}?`)) {
+                    try {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, booking.code);
+                        await updateDoc(docRef, { type: 'cancellazione' });
+                        
+                        window.sendCancellationEmailNotification(booking);
+                        window.setView('receipt', { code: booking.code, type: 'cancellazione', data: booking });
+                        window.showMessage("La prenotazione è stata annullata.");
+                    } catch(e) {
+                        window.showMessage("Errore nell'annullamento cloud.", true);
+                    }
+                }
+            } else {
+                window.setView('receipt', { code: booking.code, type: booking.type, data: booking });
+                window.sendAutomaticEmailNotification(booking, true);
+            }
+        };
+
+        // Inizializzazione dell'applicazione
+        async function initializeAppLogic() {
+            window.updateStatusText("CONNESSIONE IN CORSO...");
+            
+            if (!window.firebaseImports) {
+                console.error("Librerie Firebase SDK non caricate correttamente!");
+                window.updateStatusText("ERRORE DI CARICAMENTO", true);
+                return;
+            }
+
+            await window.startFirebaseIntegration();
+            window.createBubbles();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAppLogic);
+        } else {
+            initializeAppLogic();
+        }
+
+    </script>
+</body>
+</html>
