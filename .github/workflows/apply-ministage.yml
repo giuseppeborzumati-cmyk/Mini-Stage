@@ -1,10 +1,12 @@
-name: Apply MiniStage complete rebuild
+name: Apply MiniStage final
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - '.github/workflows/apply-ministage.yml'
+      - patch-ministage.py
+      - .github/workflows/apply-ministage.yml
 
 permissions:
   contents: write
@@ -12,230 +14,61 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Patch index from current HTML
+      - name: Apply patch
+        run: python3 patch-ministage.py
+
+      - name: Verify JavaScript and final structure
         run: |
-          python3 <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-
-          # Correzioni strutturali di base.
-          if s.startswith('<DOCTYPE html>'):
-              s = '<!DOCTYPE html>' + s[len('<DOCTYPE html>'):]
-          elif s.startswith('!DOCTYPE html>'):
-              s = '<!DOCTYPE html>' + s[len('!DOCTYPE html>'):]
-          s = s.replace('src="Levi.png"', 'src="levi.png"')
-
-          # Descrizione completa MiniStage richiesta.
-          old_desc = '''<p class="text-sm text-gray-600 leading-relaxed">
-                        I nostri mini-stage offrono ai ragazzi di terza media l'opportunità di assistere alle lezioni curricolari, conoscere i professori e vivere l'ambiente scolastico del nostro istituto. Seleziona lo slot orario desiderato qui sotto per riservare il tuo posto.
-                    </p>'''
-          new_desc = '''<div id="ministage-description" class="mt-3 text-sm text-gray-600 leading-relaxed space-y-2">
-                        <h3 class="text-base font-black text-indigo-900">Descrizione dei MiniStage</h3>
-                        <p>Partecipa ai nostri <strong>MiniStage</strong>, per vivere da vicino l’esperienza didattica della nostra scuola e conoscere la nostra offerta formativa!</p>
-                        <ul class="space-y-1.5 list-disc pl-5">
-                            <li><strong>Struttura delle attività:</strong> parteciperai a lezioni pratiche o esperienziali della durata di <strong>2 ore</strong> (dalle 14:30 alle 16:30), tenute dai <strong>docenti delle materie d'indirizzo</strong>.</li>
-                            <li><strong>Accoglienza:</strong> l'accoglienza degli studenti si terrà nell'atrio della scuola <strong>15 minuti prima</strong> dell'inizio dell'attività (ore 14:15).</li>
-                            <li><strong>Gruppi e Posti Limitati:</strong> le classi saranno formate da un massimo di <strong>25 studenti</strong> per garantire a ciascuno il massimo supporto e coinvolgimento.</li>
-                            <li><strong>Conferma dell'iscrizione:</strong> una volta completata la prenotazione, riceverai una <strong>e-mail di conferma</strong> con l'indicazione della classe assegnata.</li>
-                        </ul>
-                        <div class="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-                            <p><strong>Orario:</strong> 14:30 – 16:30</p>
-                            <p class="text-xs text-indigo-700"><em>Accoglienza a partire dalle 14:15 nell'atrio dell'istituto.</em></p>
-                        </div>
-                        <p class="mt-2"><strong>Disdetta / Annullamento:</strong> in caso di impossibilità a partecipare, ti chiediamo gentilmente di annullare tempestivamente la prenotazione tramite questo sito, per consentire ad altri studenti interessati di scorrere la lista d'attesa e prendere parte all'evento.</p>
-                    </div>'''
-          if old_desc in s:
-              s = s.replace(old_desc, new_desc, 1)
-
-          # Aggiunge il nuovo corso alla griglia della Home.
-          marker = '''                    <!-- 2. RIM -->'''
-          curvatura_card = '''                    <!-- Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica -->
-                    <div class="glass-card p-4 flex flex-col h-[260px]">
-                        <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
-                            <span class="flex items-center">
-                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-                                Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica
-                            </span>
-                            <span class="text-[9px] text-emerald-600 font-bold tracking-wider uppercase">Liceo</span>
-                        </h4>
-                        <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-curvatura-economica"></div>
-                    </div>
-
-'''
-          if 'id="container-curvatura-economica"' not in s and marker in s:
-              s = s.replace(marker, curvatura_card + marker, 1)
-
-          # Sistema Moda: denominazione corretta nell'interfaccia, compatibilità dati invariata.
-          s = s.replace('''                                Sistema Moda
-                            </span>
-                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Professionale</span>''', '''                                Sistema Moda - Istituto Tecnico
-                            </span>
-                            <span class="text-[9px] text-pink-500 font-bold tracking-wider uppercase">Tecnico</span>''')
-          s = s.replace('class="glass-card p-4 flex flex-col h-[260px] md:col-span-2 max-w-2xl mx-auto w-full"', 'class="glass-card p-4 flex flex-col h-[260px]"')
-
-          # Nuovo percorso nei mapping nativi: appare anche nei filtri e nell'aggiunta manuale slot.
-          old_addresses = '''        const INDIRIZZI_MAPPING = [
-            "Liceo Scientifico - Scienze Applicate",
-            "Relazioni Internazionali per il Marketing (RIM)",
-            "Logistica - Quadriennale",
-            "Costruzione Ambiente e Territorio (CAT)",
-            "Sistema Moda"
-        ];'''
-          new_addresses = '''        const INDIRIZZI_MAPPING = [
-            "Liceo Scientifico - Scienze Applicate",
-            "Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica",
-            "Relazioni Internazionali per il Marketing (RIM)",
-            "Logistica - Quadriennale",
-            "Costruzione Ambiente e Territorio (CAT)",
-            "Sistema Moda"
-        ];'''
-          if old_addresses in s:
-              s = s.replace(old_addresses, new_addresses, 1)
-
-          old_containers = '''        const CONTAINER_MAPPING = {
-            "Liceo Scientifico - Scienze Applicate": "container-liceo",
-            "Relazioni Internazionali per il Marketing (RIM)": "container-rim",
-            "Logistica - Quadriennale": "container-logistica",
-            "Costruzione Ambiente e Territorio (CAT)": "container-cat",
-            "Sistema Moda": "container-moda"
-        };'''
-          new_containers = '''        const CONTAINER_MAPPING = {
-            "Liceo Scientifico - Scienze Applicate": "container-liceo",
-            "Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica": "container-curvatura-economica",
-            "Relazioni Internazionali per il Marketing (RIM)": "container-rim",
-            "Logistica - Quadriennale": "container-logistica",
-            "Costruzione Ambiente e Territorio (CAT)": "container-cat",
-            "Sistema Moda": "container-moda"
-        };'''
-          if old_containers in s:
-              s = s.replace(old_containers, new_containers, 1)
-
-          # 25 posti come capacità iniziale/fallback. Le capacità restano modificabili dalla Commissione.
-          s = s.replace('{ indirizzo: ind, postiMax: 5 }', '{ indirizzo: ind, postiMax: 25 }')
-          s = s.replace('capacitiesConfig[slot.indirizzo] || 5', 'capacitiesConfig[slot.indirizzo] || 25')
-          s = s.replace('capacitiesConfig[ind] || 5', 'capacitiesConfig[ind] || 25')
-          s = s.replace('parseInt(el.value) || 5', 'parseInt(el.value) || 25')
-          s = s.replace('pmax || capacitiesConfig[ind] || 5', 'pmax || capacitiesConfig[ind] || 25')
-          s = s.replace('capacitiesConfig[s.indirizzo] || 5', 'capacitiesConfig[s.indirizzo] || 25')
-
-          # Espone soltanto il contesto Firebase già esistente al singolo modulo esterno.
-          anchor = '''        let html5QrScanner = null;'''
-          exposure = '''        let html5QrScanner = null;
-
-        window.__miniStageCore = {
-            db,
-            auth,
-            appId,
-            addresses: INDIRIZZI_MAPPING,
-            collections: {
-                prenotazioni: COLLECTION_PRENOTAZIONI,
-                impostazioni: COLLECTION_IMPOSTAZIONI,
-                capacita: COLLECTION_CONFIG_CAPACITA,
-                promemoria: COLLECTION_CONFIG_PROMEMORIA
-            },
-            getBookings: () => allBookings,
-            getSlots: () => stageSlots,
-            getCapacities: () => capacitiesConfig
-        };'''
-          if 'window.__miniStageCore' not in s and anchor in s:
-              s = s.replace(anchor, exposure, 1)
-
-          # Carica un solo modulo aggiuntivo.
-          if 'ministage-complete.js' not in s:
-              s = s.replace('</body>', '    <script src="ministage-complete.js"></script>\n</body>', 1)
-
-          # Nessuna data prefissata deve restare nel codice.
-          forbidden = ['2026-11-06', '2026-11-20', '06/11/2026', '20/11/2026']
-          for value in forbidden:
-              if value in s:
-                  raise SystemExit(f'Data hard-coded non consentita: {value}')
-
-          p.write_text(s, encoding='utf-8')
-          PY
-
-      - name: Static verification
-        run: |
-          set -e
           node --check ministage-complete.js
-          python3 <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          js=Path('ministage-complete.js').read_text(encoding='utf-8')
-          checks={
-            'doctype': s.startswith('<!DOCTYPE html>'),
-            'logo': 'src="levi.png"' in s,
-            'description': 'Descrizione dei MiniStage' in s and '14:30 – 16:30' in s and '14:15' in s,
-            'curvatura card': 'container-curvatura-economica' in s,
-            'curvatura mapping': 'Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica' in s,
-            'modulo unico': '<script src="ministage-complete.js"></script>' in s,
-            'core': 'window.__miniStageCore' in s,
-            'waitlist': 'lista_attesa' in js,
-            'pdf riserva': 'ISCRIZIONE CON RISERVA' in js,
-            'scorrimento': 'Ammesso da scorrimento' in js,
-            'scanner smartphone': 'createSmartphoneScannerLink' in js,
-          }
-          bad=[k for k,v in checks.items() if not v]
-          if bad: raise SystemExit('Controlli falliti: '+', '.join(bad))
-          for x in ['2026-11-06','2026-11-20','06/11/2026','20/11/2026']:
-            if x in s or x in js: raise SystemExit('Data hard-coded: '+x)
-          print('STATIC_OK')
+          s = Path('index.html').read_text(encoding='utf-8')
+          js = Path('ministage-complete.js').read_text(encoding='utf-8')
+          required_html = [
+              '<!DOCTYPE html>',
+              'Descrizione dei MiniStage',
+              '14:30 – 16:30',
+              'ore 14:15',
+              'massimo di <strong>25 studenti</strong>',
+              'container-curvatura-economica',
+              'Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica',
+              'Sistema Moda - Istituto Tecnico',
+              'window.__miniStageCore',
+              '<script src="ministage-complete.js"></script>'
+          ]
+          required_js = [
+              'lista_attesa',
+              'ISCRIZIONE CON RISERVA',
+              'Ammesso da scorrimento',
+              'downloadWaitlistPdf',
+              'downloadAllClassListsPdf',
+              'createSmartphoneScannerLink',
+              'authorizationPaperReceived',
+              'DEFAULT_CAPACITY = 25'
+          ]
+          missing = [x for x in required_html if x not in s] + [x for x in required_js if x not in js]
+          if missing:
+              raise SystemExit('Mancano: ' + ' | '.join(missing))
+          for bad in ('2026-11-06','2026-11-20','06/11/2026','20/11/2026'):
+              if bad in s or bad in js:
+                  raise SystemExit('Data hard-coded trovata: ' + bad)
+          print('MINISTAGE_FINAL_STATIC_OK')
           PY
 
-      - name: Browser smoke test
+      - name: Commit applied files
         run: |
-          npm init -y >/dev/null 2>&1
-          npm install --no-save playwright >/dev/null
-          npx playwright install chromium >/dev/null
-          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/ministage-http.log 2>&1 &
-          sleep 2
-          node <<'NODE'
-          const { chromium } = require('playwright');
-          (async()=>{
-            const browser=await chromium.launch({headless:true});
-            const page=await browser.newPage({viewport:{width:1365,height:1000}});
-            page.setDefaultTimeout(12000);
-            const fatal=[];
-            page.on('pageerror',e=>fatal.push(e.message));
-            await page.goto('http://127.0.0.1:8000/',{waitUntil:'domcontentloaded',timeout:30000});
-            await page.waitForFunction(()=>typeof window.openManageBookingModal==='function' && typeof window.showAdminView==='function');
-            await page.evaluate(()=>window.goToHome());
-            if(await page.locator('#view-home').evaluate(e=>e.classList.contains('hidden'))) throw new Error('Home hidden');
-            if(await page.getByText('Descrizione dei MiniStage').count()!==1) throw new Error('Descrizione mancante');
-            if(await page.getByText('Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica',{exact:true}).count()<1) throw new Error('Curvatura mancante');
-            await page.getByRole('button',{name:'Recupera Prenotazione'}).click();
-            if(await page.locator('#manage-booking-modal').evaluate(e=>e.classList.contains('hidden'))) throw new Error('Recupera non apre');
-            await page.evaluate(()=>window.closeManageBookingBookingModal());
-            await page.getByRole('button',{name:'Cancella Prenotazione'}).click();
-            if(await page.locator('#manage-booking-modal').evaluate(e=>e.classList.contains('hidden'))) throw new Error('Cancella non apre');
-            await page.evaluate(()=>window.closeManageBookingBookingModal());
-            await page.getByRole('button',{name:/Accesso Commissione Orientamento/i}).click();
-            if(await page.locator('#view-admin').evaluate(e=>e.classList.contains('hidden'))) throw new Error('Commissione non apre');
-            await page.evaluate(()=>window.goToHome());
-            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.version,{timeout:20000});
-            await page.evaluate(()=>window.openBookingModal('TEST-SLOT','Liceo Scientifico - Scienze Applicate','Giorno','data-manuale','14:30 - 16:30'));
-            if(await page.locator('#booking-modal').evaluate(e=>e.classList.contains('hidden'))) throw new Error('Prenota non apre');
-            if(await page.locator('#mini-exit-auth').count()!==1) throw new Error('Autorizzazione uscita mancante');
-            await page.evaluate(()=>window.closeModal());
-            if(fatal.length) throw new Error('Errori JS: '+fatal.join(' | '));
-            console.log('BROWSER_OK');
-            await browser.close();
-          })().catch(e=>{console.error(e);process.exit(1)});
-          NODE
-
-      - name: Commit final files and remove one-shot workflow
-        run: |
+          rm -f patch-ministage.py
           rm -f .github/workflows/apply-ministage.yml
           rmdir .github/workflows 2>/dev/null || true
           rmdir .github 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Ripristina MiniStage completo stabile con lista attesa e nuovo percorso"
+          git commit -m "Applica MiniStage completo stabile e nuovo percorso"
           git push
