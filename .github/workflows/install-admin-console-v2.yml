@@ -57,11 +57,17 @@ jobs:
             await page.goto('http://127.0.0.1:8000/?verify=adminv2',{waitUntil:'domcontentloaded',timeout:30000});
             await page.waitForFunction(()=>window.__MINISTAGE_ADMIN_CONSOLE_V2__?.version,{timeout:25000});
             await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.dataReady,{timeout:25000});
-            const data=await page.evaluate(()=>({
-              tabs:[...document.querySelectorAll('#mini-admin-tabs [data-mini-tab]')].map(x=>x.textContent.trim()),
-              funcs:{qr:typeof window.createSmartphoneScannerLink,save:typeof window.miniAdminSaveSlot,create:typeof window.miniAdminCreateSlot,check:typeof window.miniAdminManualCheckIn},
-              dates:window.__miniStageCore.getSlots().filter(s=>/06\/11\/2026|20\/11\/2026/.test(String(s.dateStr||''))).map(s=>({a:s.indirizzo,d:s.dateStr,t:s.time,c:s.postiMax,active:s.active}))
-            }));
+            const data=await page.evaluate(async()=>{
+              const f=window.firebaseImports, core=window.__miniStageCore;
+              const p=`artifacts/${core.appId}/public/data/${core.collections.impostazioni}`;
+              const snap=await f.getDocs(f.collection(core.db,p));
+              const slots=[]; snap.forEach(d=>slots.push({id:d.id,...d.data()}));
+              return {
+                tabs:[...document.querySelectorAll('#mini-admin-tabs [data-mini-tab]')].map(x=>x.textContent.trim()),
+                funcs:{qr:typeof window.createSmartphoneScannerLink,save:typeof window.miniAdminSaveSlot,create:typeof window.miniAdminCreateSlot,check:typeof window.miniAdminManualCheckIn},
+                dates:slots.filter(s=>/06\/11\/2026|20\/11\/2026/.test(String(s.dateStr||''))).map(s=>({a:s.indirizzo,d:s.dateStr,t:s.time,c:s.postiMax,active:s.active}))
+              };
+            });
             console.log('ADMIN_V2_STATE',JSON.stringify(data));
             assert(data.tabs.includes('Iscritti')&&data.tabs.includes('Lista d’attesa')&&data.tabs.includes('Calendario')&&data.tabs.includes('Scanner Accoglienza'),'Tab docenti incomplete');
             Object.entries(data.funcs).forEach(([k,v])=>assert(v==='function','Funzione mancante '+k));
