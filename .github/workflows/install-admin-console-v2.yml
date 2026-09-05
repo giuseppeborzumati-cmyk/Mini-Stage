@@ -1,0 +1,83 @@
+name: Install MiniStage admin console v2
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/install-admin-console-v2.yml]
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch loader and static checks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='<script src="ministage-complete.js"></script>'
+          new='<script src="ministage-complete.js?v=20260906b"></script>\n    <script src="ministage-admin-console-v2.js?v=20260906b"></script>'
+          if 'ministage-admin-console-v2.js' not in s:
+              if old not in s: raise SystemExit('Loader MiniStage non trovato')
+              s=s.replace(old,new,1)
+              p.write_text(s,encoding='utf-8')
+          PY
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text(encoding='utf-8')
+          admin=Path('ministage-admin-console-v2.js').read_text(encoding='utf-8')
+          assert 'ministage-admin-console-v2.js?v=20260906b' in html
+          for d in ('2026-11-06','2026-11-20','06/11/2026','20/11/2026'):
+              assert d not in html and d not in admin
+          for x in ('Scanner Accoglienza','Lista d’attesa','Calendario MiniStage','Genera QR per collegare i telefoni','miniAdminSaveSlot','createSmartphoneScannerLink'):
+              assert x in admin
+          print('STATIC_ADMIN_V2_OK')
+          PY
+      - name: Browser verification with Firebase read-only calendar
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/http.log 2>&1 &
+          sleep 2
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const assert=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8000/?verify=adminv2',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_ADMIN_CONSOLE_V2__?.version,{timeout:25000});
+            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.dataReady,{timeout:25000});
+            const data=await page.evaluate(()=>({
+              tabs:[...document.querySelectorAll('#mini-admin-tabs [data-mini-tab]')].map(x=>x.textContent.trim()),
+              funcs:{qr:typeof window.createSmartphoneScannerLink,save:typeof window.miniAdminSaveSlot,create:typeof window.miniAdminCreateSlot,check:typeof window.miniAdminManualCheckIn},
+              dates:window.__miniStageCore.getSlots().filter(s=>/06\/11\/2026|20\/11\/2026/.test(String(s.dateStr||''))).map(s=>({a:s.indirizzo,d:s.dateStr,t:s.time,c:s.postiMax,active:s.active}))
+            }));
+            console.log('ADMIN_V2_STATE',JSON.stringify(data));
+            assert(data.tabs.includes('Iscritti')&&data.tabs.includes('Lista d’attesa')&&data.tabs.includes('Calendario')&&data.tabs.includes('Scanner Accoglienza'),'Tab docenti incomplete');
+            Object.entries(data.funcs).forEach(([k,v])=>assert(v==='function','Funzione mancante '+k));
+            assert(data.dates.length>=12,'Date Firebase 6/20 novembre incomplete');
+            assert(data.dates.every(x=>Number(x.c)===25),'Capienza non 25');
+            assert(data.dates.every(x=>String(x.t).replace(/\s/g,'')==='14:30-16:30'),'Orario non coerente');
+            assert(errors.length===0,'Errori JS: '+errors.join(' | '));
+            console.log('ADMIN_V2_BROWSER_OK');
+            await browser.close();
+          })().catch(e=>{console.error('ADMIN_V2_BROWSER_FAIL',e);process.exit(1)});
+          NODE
+      - name: Commit loader and remove installer
+        run: |
+          rm -f .github/workflows/install-admin-console-v2.yml
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html .github/workflows/install-admin-console-v2.yml
+          git commit -m "Attiva console docenti e scanner QR MiniStage v2"
+          git push
