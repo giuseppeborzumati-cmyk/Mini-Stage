@@ -1,0 +1,26 @@
+name: Disable stray MiniStage slot if empty
+on:
+  push:
+    paths:
+      - 'tools/disable_stray_slot_if_empty.mjs'
+      - '.github/workflows/disable-stray-slot-if-empty.yml'
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - run: node tools/disable_stray_slot_if_empty.mjs
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git rm tools/disable_stray_slot_if_empty.mjs .github/workflows/disable-stray-slot-if-empty.yml
+          git commit -m "Rimuove controllo temporaneo slot anomalo" || true
+          git push || true
