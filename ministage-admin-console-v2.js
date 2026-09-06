@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-docente-pagine-v5';
+  const VERSION = '2026.09-docente-pagine-v6';
   const ACTIVE = 'prenotazione';
   const WAITLIST = 'lista_attesa';
   const CHECKED = 'entrato';
@@ -960,7 +960,14 @@
     ensureShell();
     installPublicRenderFix();
     wrapAdminLogin();
-    subscribe();
+    const connectFirestoreWhenAuthenticated = () => {
+      if (core.auth?.currentUser) {
+        subscribe();
+        return;
+      }
+      setTimeout(connectFirestoreWhenAuthenticated, 150);
+    };
+    connectFirestoreWhenAuthenticated();
     window.addEventListener('hashchange', handleHash);
     window.__MINISTAGE_ADMIN_CONSOLE_V2__ = { version: VERSION, pages: Object.keys(pageMeta), publicSlotNormalization: true };
   }
