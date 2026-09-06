@@ -1,0 +1,39 @@
+name: Aggiorna licei indipendenti
+on:
+  push:
+    paths:
+      - 'tools/update_licei_indipendenti.py'
+      - '.github/workflows/update-licei-indipendenti.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica aggiornamento
+        run: python tools/update_licei_indipendenti.py
+      - name: Verifica JavaScript
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          node --check ministage-admin-console-v2-original.js
+      - name: Verifica separazione percorsi
+        run: |
+          grep -q 'Liceo Scientifico Scienze Applicate' index.html
+          grep -q 'Liceo Scientifico Opzione Scienze Applicate - Curvatura Economica' index.html
+          grep -q '2 ore di Economia' index.html
+          grep -q '1 ora in meno di Scienze naturali' index.html
+          test "$(grep -c 'id="container-liceo"' index.html)" -eq 1
+          test "$(grep -c 'id="container-curvatura-economica"' index.html)" -eq 1
+          grep -q "const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica';" ministage-complete.js
+          grep -q "const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica';" ministage-admin-console-v2-original.js
+          echo LICEI_SEPARATI_VERIFICATI
+      - name: Pubblica e ripulisce file temporanei
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js ministage-admin-console-v2.js ministage-admin-console-v2-original.js
+          git rm tools/update_licei_indipendenti.py .github/workflows/update-licei-indipendenti.yml
+          git commit -m "Separa i due percorsi liceali e aggiunge descrizioni"
+          git push
