@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-mobile-email-v3';
+  const VERSION = '2026.09-final-deep-audit-v4';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -183,6 +183,9 @@
     if (role) role.value = '';
     if (pickup) { pickup.value = ''; pickup.classList.add('hidden'); }
     if (decl) decl.checked = false;
+    document.getElementById('mini-exit-notice')?.classList.add('hidden');
+    const declarationText = document.getElementById('mini-declaration-text');
+    if (declarationText) declarationText.textContent = 'Dichiaro che i dati inseriti sono corretti e confermo la modalità di uscita selezionata.';
   }
 
   async function acquireLock(slotId) {
@@ -245,6 +248,8 @@
     if (phoneDigits.length < 7 || phoneDigits.length > 15) return 'Inserisci un numero di cellulare valido.';
     if (d.nome.length < 3) return 'Inserisci nome e cognome dello studente.';
     if (d.parentGuardianName && d.parentGuardianName.length < 3) return 'Inserisci nome e cognome del genitore/tutore.';
+    const freeTextFields = [d.nome, d.scuola, d.parentGuardianName, d.parentGuardianRole, d.pickupAdultName];
+    if (freeTextFields.some(v => /[<>]/.test(String(v || '')))) return 'I campi di testo contengono caratteri non consentiti.';
     if (!d.exitMode || !d.parentGuardianName || !d.parentGuardianRole) return 'Completa la sezione relativa all’uscita.';
     if (!d.declarationAccepted) return d.exitMode === 'autonoma' ? 'Per proseguire devi spuntare l’autorizzazione esplicita all’uscita autonoma.' : 'Per proseguire devi confermare la modalità di uscita selezionata.';
     if (d.exitMode === 'ritiro_adulto' && !d.pickupAdultName) return 'Indica il nome dell’adulto incaricato del ritiro.';
@@ -592,7 +597,11 @@
     const msg = document.getElementById('receipt-message');
     const details = document.getElementById('receipt-details');
     const notice = document.querySelector('#view-receipt p.text-red-600, #view-receipt p.text-red-700');
-    if (res.type === WAITLIST || data.type === WAITLIST) {
+    if (data.type === CANCELLED) {
+      if (title) title.textContent = 'ISCRIZIONE ANNULLATA';
+      if (msg) msg.innerHTML = '<span class="text-red-600 font-extrabold text-sm">Questa prenotazione è stata annullata.</span>';
+      document.querySelector('[data-mini-auth-download]')?.remove();
+    } else if (res.type === WAITLIST || data.type === WAITLIST) {
       if (title) title.textContent = 'ISCRIZIONE CON RISERVA';
       if (msg) msg.innerHTML = `Gentile <strong>${esc(res.nome)}</strong>, la richiesta è registrata con riserva. Non sei ancora ammesso: riceverai una seconda e-mail solo in caso di scorrimento.`;
       if (notice) notice.textContent = 'ISCRIZIONE CON RISERVA: NON VALIDA COME PASS DI ACCESSO. ATTENDERE LA CONFERMA DEFINITIVA.';
@@ -610,7 +619,7 @@
         extra.push(`<div><span class="text-gray-400 font-medium">Modulo firmato:</span> <strong class="${res.authorizationPaperReceived ? 'text-green-700' : 'text-orange-700'}">${res.authorizationPaperReceived ? 'Ricevuto dalla scuola' : 'Da stampare, firmare e consegnare'}</strong></div>`);
       }
       if (!details.querySelector('[data-mini-extra]')) details.insertAdjacentHTML('beforeend', `<div data-mini-extra class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">${extra.join('')}</div>`);
-      if (res.exitMode === 'autonoma' && res.type !== WAITLIST && !details.querySelector('[data-mini-auth-download]')) details.insertAdjacentHTML('afterend', `<div data-mini-auth-download class="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><span><strong>Uscita autonoma:</strong> il PDF della prenotazione contiene la seconda pagina da firmare.</span><button type="button" onclick="window.downloadMiniStageBookingPdf('${esc(res.code)}')" class="bg-orange-600 text-white font-bold px-3 py-2 rounded-lg text-[10px]">Scarica PDF + autorizzazione</button></div>`);
+      if (data.type !== CANCELLED && res.exitMode === 'autonoma' && res.type !== WAITLIST && !document.querySelector('[data-mini-auth-download]')) details.insertAdjacentHTML('afterend', `<div data-mini-auth-download class="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><span><strong>Uscita autonoma:</strong> il PDF della prenotazione contiene la seconda pagina da firmare.</span><button type="button" onclick="window.downloadMiniStageBookingPdf('${esc(res.code)}')" class="bg-orange-600 text-white font-bold px-3 py-2 rounded-lg text-[10px]">Scarica PDF + autorizzazione</button></div>`);
     }
   }
 
@@ -861,6 +870,7 @@
     if(b.type===WAITLIST)return feedback('Studente ancora in lista d’attesa.',true);
     if(b.type===CANCELLED)return feedback('Prenotazione annullata.',true);
     if(b.type===CHECKED)return feedback('Studente già registrato come presente.',true);
+    if(b.type!==ACTIVE)return feedback('Stato della prenotazione non valido per l’ingresso.',true);
     await f.updateDoc(f.doc(core.db,`${bookingPath()}/${code}`),{type:CHECKED,checkInAt:Date.now(),checkInSource:'smartphone'});
     feedback(`Presenza registrata: ${b.nome}`);
   }
@@ -935,7 +945,7 @@
   async function init() {
     if(installed)return;
     core=window.__miniStageCore; f=window.firebaseImports;
-    const ready=core?.db && f?.collection && typeof window.openBookingModal==='function' && typeof window.renderStages==='function' && window.jspdf?.jsPDF;
+    const ready=core?.db && f?.collection && typeof window.openBookingModal==='function' && typeof window.renderStages==='function';
     if(!ready){setTimeout(init,120);return;}
     installed=true;
     window.__MINISTAGE_COMPLETE__={version:VERSION,uiReady:false,dataReady:false};

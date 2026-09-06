@@ -16,6 +16,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         
+        .hidden { display: none !important; }
+
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f3e8ff 100%);
@@ -314,9 +316,9 @@
                 </div>
             </div>
 
-            <footer class="w-full flex justify-between items-center py-3 border-t border-indigo-100/50 text-[10px] text-gray-400">
+            <footer class="w-full flex flex-col sm:flex-row justify-between items-center gap-2 py-3 border-t border-indigo-100/50 text-[10px] text-gray-500">
                 <p>&copy; Commissione Orientamento Primo Levi - Seregno</p>
-                <p>Sistema Convalida Digitale</p>
+                <p><a href="https://www.leviseregno.edu.it/privacy" target="_blank" rel="noopener noreferrer" class="underline font-bold text-indigo-600">Informativa Privacy dell’Istituto</a></p>
             </footer>
         </div>
         
@@ -717,6 +719,7 @@
                 <input type="text" id="modal-scuola" placeholder="Scuola di Provenienza (Terza Media)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
                 <input type="email" id="modal-email" placeholder="Email del Genitore o Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
                 <input type="tel" id="modal-cellulare" placeholder="Numero di Cellulare (Genitore)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <p class="text-[10px] text-gray-500 leading-relaxed">I dati inseriti sono utilizzati per la gestione del MiniStage. Consulta l’<a href="https://www.leviseregno.edu.it/privacy" target="_blank" rel="noopener noreferrer" class="underline font-bold text-indigo-600">Informativa Privacy ufficiale dell’Istituto</a>.</p>
             </div>
 
             <div class="flex justify-end space-x-3 mt-6 sticky bottom-0 z-10 bg-white/95 backdrop-blur-sm pt-3 pb-2 -mx-1 px-1">
@@ -2063,7 +2066,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906g"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906g"></script>
+    <script src="ministage-complete.js?v=20260906h"></script>
+    <script src="ministage-admin-console-v2.js?v=20260906h"></script>
 </body>
 </html>
