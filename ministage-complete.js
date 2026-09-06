@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-final-hardening-v5';
+  const VERSION = '2026.09-parent-release-v6';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -66,6 +66,13 @@
 
   function classFor(indirizzo) {
     return classes[indirizzo] || '';
+  }
+
+  function resolvedClass(indirizzo, stored = '') {
+    const configured = String(classFor(indirizzo) || '').trim();
+    if (configured) return configured;
+    const saved = String(stored || '').trim();
+    return saved && saved.toLowerCase() !== 'da definire' ? saved : 'Da definire';
   }
 
   async function snapshotCollection(collectionPath) {
@@ -271,10 +278,15 @@
       const slot = slots.find(s => s.id === d.slotId) || (await snapshotCollection(slotPath())).find(s => s.id === d.slotId);
       if (!slot) throw new Error('SLOT_NOT_FOUND');
       if (slot.active === false) throw new Error('SLOT_INACTIVE');
+      const canonicalIndirizzo = String(slot.indirizzo || d.indirizzo || '').trim();
+      const canonicalDay = String(slot.day || d.stageDay || '').trim();
+      const canonicalDate = String(slot.dateStr || d.stageDate || '').trim();
+      const canonicalTime = String(slot.time || d.stageTime || '').trim();
+      if (!canonicalIndirizzo || !canonicalDate || !canonicalTime) throw new Error('SLOT_NOT_FOUND');
       const freshCaps = await snapshotCollection(capPath());
       const capMap = {};
       freshCaps.forEach(x => { if (x.indirizzo) capMap[x.indirizzo] = Number(x.postiMax || DEFAULT_CAPACITY); });
-      const max = Math.max(1, Number(slot.postiMax || capMap[d.indirizzo] || DEFAULT_CAPACITY));
+      const max = Math.max(1, Number(slot.postiMax || capMap[canonicalIndirizzo] || DEFAULT_CAPACITY));
       const active = fresh.filter(b => b.slotId === d.slotId && (b.type === ACTIVE || b.type === CHECKED)).length;
       const queue = fresh.filter(b => b.slotId === d.slotId && b.type === WAITLIST).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
       const type = (waitlistMode || queue.length > 0 || active >= max) ? WAITLIST : ACTIVE;
@@ -283,10 +295,10 @@
       const data = {
         code, type,
         slotId: d.slotId,
-        indirizzo: d.indirizzo,
-        stageDay: d.stageDay,
-        stageDate: d.stageDate,
-        stageTime: d.stageTime,
+        indirizzo: canonicalIndirizzo,
+        stageDay: canonicalDay,
+        stageDate: canonicalDate,
+        stageTime: canonicalTime,
         nome: d.nome,
         scuola: d.scuola,
         email: d.email,
@@ -294,7 +306,7 @@
         timestamp,
         reminderSent: false,
         certificateSent: false,
-        classeAssegnata: classFor(d.indirizzo) || 'Da definire',
+        classeAssegnata: resolvedClass(canonicalIndirizzo),
         exitMode: d.exitMode,
         parentGuardianName: d.parentGuardianName,
         parentGuardianRole: d.parentGuardianRole,
@@ -400,7 +412,7 @@
       if (actionHost && !/lista d'attesa/i.test(actionHost.textContent || '')) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-extrabold px-4 py-2 rounded-xl transition shadow-md';
+        btn.className = 'bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-extrabold px-4 py-2.5 min-h-[44px] rounded-xl transition shadow-md';
         btn.textContent = queue.length ? `Lista d'attesa (${queue.length})` : "Lista d'attesa";
         btn.addEventListener('click', () => window.openWaitlistModal(slot.id, slot.indirizzo, slot.day, slot.dateStr, slot.time));
         actionHost.replaceWith(btn);
@@ -463,7 +475,7 @@
     y1 = drawField(pdf, 'Cellulare', res.cellulare, 18, y1);
     let y2 = 65;
     y2 = drawField(pdf, 'Percorso', res.indirizzo, 110, y2);
-    y2 = drawField(pdf, 'Classe assegnata', res.classeAssegnata || classFor(res.indirizzo) || 'Da definire', 110, y2);
+    y2 = drawField(pdf, 'Classe assegnata', resolvedClass(res.indirizzo, res.classeAssegnata), 110, y2);
     y2 = drawField(pdf, 'Data', `${res.stageDay || ''} ${res.stageDate || ''}`.trim(), 110, y2);
     y2 = drawField(pdf, 'Orario', res.stageTime || '14:30 - 16:30', 110, y2);
     const boxY = Math.max(y1,y2)+4;
@@ -513,7 +525,7 @@
     pdf.setTextColor(154,52,18); pdf.setFont('Helvetica','bold'); pdf.setFontSize(12); pdf.text('NON ANCORA AMMESSO AL MINISTAGE',22,58);
     pdf.setFont('Helvetica','normal'); pdf.setFontSize(8.5); pdf.text('Questo documento registra la richiesta ma non costituisce conferma definitiva di partecipazione.',22,65);
     let y1=88; y1=drawField(pdf,'Studente',res.nome,18,y1); y1=drawField(pdf,'Scuola',res.scuola,18,y1); y1=drawField(pdf,'E-mail',res.email,18,y1); y1=drawField(pdf,'Telefono',res.cellulare,18,y1);
-    let y2=88; y2=drawField(pdf,'Percorso',res.indirizzo,110,y2); y2=drawField(pdf,'Classe',res.classeAssegnata || 'Da definire',110,y2); y2=drawField(pdf,'Data',`${res.stageDay||''} ${res.stageDate||''}`.trim(),110,y2); y2=drawField(pdf,'Orario',res.stageTime,110,y2);
+    let y2=88; y2=drawField(pdf,'Percorso',res.indirizzo,110,y2); y2=drawField(pdf,'Classe',resolvedClass(res.indirizzo, res.classeAssegnata),110,y2); y2=drawField(pdf,'Data',`${res.stageDay||''} ${res.stageDate||''}`.trim(),110,y2); y2=drawField(pdf,'Orario',res.stageTime,110,y2);
     const qy=Math.max(y1,y2)+5; pdf.setFillColor(245,243,255); pdf.roundedRect(15,qy,180,25,3,3,'F'); pdf.setTextColor(88,28,135); pdf.setFont('Helvetica','bold'); pdf.setFontSize(10); pdf.text(`Codice richiesta: ${res.code}`,22,qy+9); pdf.text(`Posizione indicativa in lista: ${position || 'in aggiornamento'}`,22,qy+17);
     let y=qy+39; pdf.setTextColor(30,27,75); pdf.setFontSize(11); pdf.text('COME FUNZIONA LA LISTA D’ATTESA',15,y); y+=8; pdf.setFont('Helvetica','normal'); pdf.setFontSize(8.5); pdf.setTextColor(70,70,80);
     const steps=[
@@ -535,13 +547,13 @@
     const rest = parts.slice(1).join(' ');
     const promoted = !!(res.waitlistPromotedAt || res.waitlistPromotionStatus === 'Ammesso da scorrimento');
     let subject = `MiniStage IIS Primo Levi - Conferma ${res.code}`;
-    let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
+    let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${resolvedClass(res.indirizzo, res.classeAssegnata)}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
     if (kind === 'reserve') {
       subject = `MiniStage IIS Primo Levi - Iscrizione con riserva ${res.code}`;
       message = `La richiesta ${res.code} è stata registrata con riserva. Posizione indicativa: ${position || 'in aggiornamento'}. Attendere una successiva e-mail di conferma definitiva.`;
     } else if (promoted) {
       subject = `MiniStage IIS Primo Levi - Ammesso da scorrimento ${res.code}`;
-      message = `Il posto è stato assegnato dalla lista d'attesa. La prenotazione ${res.code} è ora confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
+      message = `Il posto è stato assegnato dalla lista d'attesa. La prenotazione ${res.code} è ora confermata. Classe assegnata: ${resolvedClass(res.indirizzo, res.classeAssegnata)}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
     } else if (isRetrieval) {
       subject = `MiniStage IIS Primo Levi - Duplicato prenotazione ${res.code}`;
     }
@@ -612,7 +624,7 @@
     }
     if (details) {
       const extra = [];
-      extra.push(`<div><span class="text-gray-400 font-medium">Classe assegnata:</span> <strong class="text-indigo-950">${esc(res.classeAssegnata || classFor(res.indirizzo) || 'Da definire')}</strong></div>`);
+      extra.push(`<div><span class="text-gray-400 font-medium">Classe assegnata:</span> <strong class="text-indigo-950">${esc(resolvedClass(res.indirizzo, res.classeAssegnata))}</strong></div>`);
       extra.push(`<div><span class="text-gray-400 font-medium">Uscita:</span> <strong class="text-indigo-950">${res.exitMode === 'autonoma' ? 'Autonoma - autorizzata online' : res.exitMode === 'ritiro_adulto' ? `Attesa adulto${res.pickupAdultName ? ` (${esc(res.pickupAdultName)})` : ''}` : 'Non indicata'}</strong></div>`);
       if (res.parentGuardianName) extra.push(`<div><span class="text-gray-400 font-medium">Genitore/tutore:</span> <strong class="text-indigo-950">${esc(res.parentGuardianName)}${res.parentGuardianRole ? ` (${esc(res.parentGuardianRole)})` : ''}</strong></div>`);
       if (res.exitMode === 'autonoma') {
@@ -661,7 +673,7 @@
         waitlistPromotionStatus: 'Ammesso da scorrimento',
         waitlistPromotionSource: 'automatico',
         waitlistPositionAtPromotion: 1,
-        classeAssegnata: next.classeAssegnata || classFor(next.indirizzo) || 'Da definire'
+        classeAssegnata: resolvedClass(next.indirizzo, next.classeAssegnata)
       };
       await f.updateDoc(ref, patch);
       const promoted = { ...next, ...patch };
@@ -717,7 +729,21 @@
       classes[indirizzo] = classe;
       await f.setDoc(f.doc(core.db, `${classPath()}/${indirizzo}`), { indirizzo, classe, updatedAt: Date.now() });
     }
-    window.showMessage?.('Classi assegnate salvate.');
+
+    // Mantiene coerenti anche prenotazioni e liste d'attesa gia registrate.
+    const existing = await snapshotCollection(bookingPath()).catch(() => []);
+    for (const b of existing) {
+      if (!b?.code || b.type === CANCELLED) continue;
+      const currentClass = String(classFor(b.indirizzo) || '').trim();
+      const desiredClass = currentClass || 'Da definire';
+      if (String(b.classeAssegnata || '') === desiredClass) continue;
+      await f.updateDoc(f.doc(core.db, `${bookingPath()}/${b.code}`), {
+        classeAssegnata: desiredClass,
+        classAssignmentUpdatedAt: Date.now()
+      });
+    }
+
+    window.showMessage?.('Classi assegnate salvate e prenotazioni aggiornate.');
     await refreshState();
     renderAdminExtension();
   }
@@ -784,7 +810,7 @@
     const waitRoot=document.getElementById('mini-wait-list');
     if(waitRoot) waitRoot.innerHTML = waits.map(b=>{
       const pos=queueFor(b.slotId).findIndex(x=>x.code===b.code)+1;
-      return `<div class="p-3 bg-white border border-purple-100 rounded-xl text-xs"><div class="flex justify-between gap-3"><div><strong class="text-purple-950">${esc(b.nome)}</strong><p class="text-[10px] text-gray-500">${esc(b.code)} · ${esc(b.indirizzo)} · ${esc(b.stageDate)} ${esc(b.stageTime)}</p><p class="text-[10px] text-purple-700">Classe: ${esc(b.classeAssegnata || 'Da definire')}</p></div><span class="bg-purple-100 text-purple-800 font-black px-2 py-1 rounded-lg h-fit">Pos. ${pos}</span></div></div>`;
+      return `<div class="p-3 bg-white border border-purple-100 rounded-xl text-xs"><div class="flex justify-between gap-3"><div><strong class="text-purple-950">${esc(b.nome)}</strong><p class="text-[10px] text-gray-500">${esc(b.code)} · ${esc(b.indirizzo)} · ${esc(b.stageDate)} ${esc(b.stageTime)}</p><p class="text-[10px] text-purple-700">Classe: ${esc(resolvedClass(b.indirizzo, b.classeAssegnata))}</p></div><span class="bg-purple-100 text-purple-800 font-black px-2 py-1 rounded-lg h-fit">Pos. ${pos}</span></div></div>`;
     }).join('') || '<p class="text-[11px] text-gray-400 italic text-center py-4">Nessuna iscrizione con riserva.</p>';
     const authRoot=document.getElementById('mini-auth-list');
     if(authRoot) authRoot.innerHTML = docs.map(b=>`<div class="p-3 bg-white border border-orange-100 rounded-xl text-xs flex justify-between gap-3 items-center"><div><strong class="text-orange-950">${esc(b.nome)}</strong><p class="text-[10px] text-gray-500">${esc(b.code)} · uscita autonoma</p></div><button onclick="window.markAuthorizationPaperReceived('${esc(b.code)}')" class="bg-orange-600 text-white font-bold px-3 py-1.5 rounded-lg text-[10px]">Documenti ricevuti</button></div>`).join('') || '<p class="text-[11px] text-gray-400 italic text-center py-4">Nessun documento in attesa.</p>';
@@ -825,7 +851,7 @@
   function downloadWaitlistPdf() {
     const jsPDF=window.jspdf?.jsPDF; if(!jsPDF)return window.showMessage?.('PDF non disponibile.',true);
     const pdf=new jsPDF('l','mm','a4'); const rows=bookings.filter(b=>b.type===WAITLIST).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
-    pdfTable(pdf,'MiniStage - Iscrizioni con riserva',rows,[{label:'#',w:5,get:(_,i)=>i+1},{label:'Studente',w:28,get:r=>r.nome},{label:'Classe',w:25,get:r=>r.classeAssegnata||'Da definire'},{label:'Percorso',w:35,get:r=>r.indirizzo},{label:'Data',w:16,get:r=>r.stageDate},{label:'Ora',w:18,get:r=>r.stageTime},{label:'Pos.',w:8,get:r=>queueFor(r.slotId).findIndex(x=>x.code===r.code)+1},{label:'Email',w:35,get:r=>r.email},{label:'Telefono',w:22,get:r=>r.cellulare}]);
+    pdfTable(pdf,'MiniStage - Iscrizioni con riserva',rows,[{label:'#',w:5,get:(_,i)=>i+1},{label:'Studente',w:28,get:r=>r.nome},{label:'Classe',w:25,get:r=>resolvedClass(r.indirizzo,r.classeAssegnata)},{label:'Percorso',w:35,get:r=>r.indirizzo},{label:'Data',w:16,get:r=>r.stageDate},{label:'Ora',w:18,get:r=>r.stageTime},{label:'Pos.',w:8,get:r=>queueFor(r.slotId).findIndex(x=>x.code===r.code)+1},{label:'Email',w:35,get:r=>r.email},{label:'Telefono',w:22,get:r=>r.cellulare}]);
     pdf.save('MiniStage_Iscrizioni_con_Riserva.pdf');
   }
 

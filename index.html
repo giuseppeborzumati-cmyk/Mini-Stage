@@ -128,6 +128,19 @@
             background: rgba(99, 102, 241, 0.7);
         }
 
+        /* Affidabilita mobile: evita lo zoom automatico di iOS e mantiene target touch adeguati. */
+        @media (max-width: 639px) {
+            #booking-modal input:not([type="checkbox"]),
+            #booking-modal select,
+            #manage-booking-modal input {
+                font-size: 16px !important;
+            }
+            #booking-modal button,
+            #manage-booking-modal button {
+                min-height: 44px;
+            }
+        }
+
         /* STILI SPECIFICI PER LA STAMPA */
         @media print {
             .print-hide, header, #view-home, #view-admin, .bubble-container, button {
@@ -689,7 +702,7 @@
                 <div class="bg-purple-50/30 p-3.5 rounded-xl border border-purple-100">
                     <label class="block text-[10px] font-extrabold text-purple-700 uppercase mb-1">Cerca con i tuoi Dati</label>
                     <input id="input-search-name" type="text" placeholder="Nome e Cognome Studente" class="w-full p-2.5 mb-2 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
-                    <input id="input-search-email" type="email" placeholder="Email utilizzata" class="w-full p-2.5 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
+                    <input id="input-search-email" type="email" autocomplete="email" inputmode="email" placeholder="Email utilizzata" class="w-full p-2.5 border border-purple-100 rounded-lg text-xs focus:ring-1 focus:ring-purple-500">
                 </div>
             </div>
 
@@ -717,8 +730,8 @@
             <div class="space-y-3">
                 <input type="text" id="modal-nome" placeholder="Nome e Cognome dello Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
                 <input type="text" id="modal-scuola" placeholder="Scuola di Provenienza (Terza Media)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
-                <input type="email" id="modal-email" placeholder="Email del Genitore o Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
-                <input type="tel" id="modal-cellulare" placeholder="Numero di Cellulare (Genitore)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <input type="email" id="modal-email" autocomplete="email" inputmode="email" placeholder="Email del Genitore o Studente" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
+                <input type="tel" id="modal-cellulare" autocomplete="tel" inputmode="tel" placeholder="Numero di Cellulare (Genitore)" class="w-full p-3 border border-gray-100 rounded-xl bg-gray-50 text-xs focus:ring-2 focus:ring-indigo-500" required>
                 <p class="text-[10px] text-gray-500 leading-relaxed">I dati inseriti sono utilizzati per la gestione del MiniStage. Consulta l’<a href="https://www.leviseregno.edu.it/privacy" target="_blank" rel="noopener noreferrer" class="underline font-bold text-indigo-600">Informativa Privacy ufficiale dell’Istituto</a>.</p>
             </div>
 
@@ -2027,10 +2040,12 @@
                 if (confirm(`Confermi di voler annullare la prenotazione per ${booking.nome}?`)) {
                     try {
                         const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, booking.code);
-                        await updateDoc(docRef, { type: 'cancellazione' });
-                        
-                        window.sendCancellationEmailNotification(booking);
-                        window.setView('receipt', { code: booking.code, type: 'cancellazione', data: booking });
+                        const cancelledAt = Date.now();
+                        await updateDoc(docRef, { type: 'cancellazione', cancelledAt });
+                        const cancelledBooking = { ...booking, type: 'cancellazione', cancelledAt };
+
+                        window.sendCancellationEmailNotification(cancelledBooking);
+                        window.setView('receipt', { code: booking.code, type: 'cancellazione', data: cancelledBooking });
                         window.showMessage("La prenotazione è stata annullata.");
                     } catch(e) {
                         window.showMessage("Errore nell'annullamento cloud.", true);
@@ -2066,7 +2081,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906i"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906i"></script>
+    <script src="ministage-complete.js?v=20260906j"></script>
+    <script src="ministage-admin-console-v2.js?v=20260906j"></script>
 </body>
 </html>
