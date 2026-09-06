@@ -145,7 +145,7 @@
       <input id="mini-parent-role" type="text" placeholder="Ruolo del dichiarante (es. madre, padre, tutore)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs">
       <input id="mini-pickup-name" type="text" placeholder="Adulto incaricato del ritiro (se previsto)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs hidden">
       <div id="mini-exit-notice" class="hidden rounded-xl border border-orange-200 bg-orange-50 p-3 text-[10px] leading-relaxed text-orange-900">
-        <strong>Uscita autonoma:</strong> il PDF inviato con la conferma contiene una seconda pagina di autorizzazione. La pagina deve essere stampata, firmata dal genitore/tutore e consegnata alla scuola.
+        <strong>Uscita autonoma:</strong> il PDF inviato con la conferma contiene una seconda pagina di autorizzazione. La pagina deve essere stampata, firmata dal genitore/tutore e portata il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.
       </div>
       <label class="flex items-start gap-2 text-[10px] text-gray-700 leading-relaxed rounded-xl border border-indigo-100 bg-white p-3">
         <input id="mini-declaration" type="checkbox" class="mt-0.5">
@@ -161,7 +161,7 @@
       notice?.classList.toggle('hidden', mode !== 'autonoma');
       if (text) {
         text.innerHTML = mode === 'autonoma'
-          ? '<strong>Autorizzo espressamente mio/a figlio/a a lasciare autonomamente l’IIS Primo Levi al termine del MiniStage.</strong> Dichiaro di essere il genitore/tutore indicato e prendo atto che la seconda pagina del PDF ricevuto via e-mail dovrà essere stampata, firmata e consegnata alla scuola.'
+          ? '<strong>Autorizzo espressamente mio/a figlio/a a lasciare autonomamente l’IIS Primo Levi al termine del MiniStage.</strong> Dichiaro di essere il genitore/tutore indicato e prendo atto che la seconda pagina del PDF ricevuto via e-mail dovrà essere stampata, firmata e portata il giorno del MiniStage insieme a una copia del mio documento di riconoscimento in corso di validità.'
           : mode === 'ritiro_adulto'
             ? '<strong>Confermo che mio/a figlio/a non uscirà autonomamente</strong> e dovrà attendere l’adulto incaricato indicato nel modulo.'
             : 'Dichiaro che i dati inseriti sono corretti e confermo la modalità di uscita selezionata.';
@@ -477,13 +477,18 @@
       pdf.addPage();
       pdf.setTextColor(30,27,75); pdf.setFont('Helvetica','bold'); pdf.setFontSize(16); pdf.text('AUTORIZZAZIONE ALL’USCITA AUTONOMA', 15, 24);
       pdf.setFontSize(10); pdf.setFont('Helvetica','normal');
-      const text = `Il/La sottoscritto/a ${res.parentGuardianName || '________________'}, in qualità di ${res.parentGuardianRole || '________________'}, AUTORIZZA il/la proprio/a figlio/a ${res.nome || '________________'} a lasciare autonomamente l’IIS Primo Levi di Seregno al termine del MiniStage indicato nella prenotazione.`;
-      pdf.text(pdf.splitTextToSize(text,180),15,38);
-      pdf.setFont('Helvetica','bold'); pdf.text('Codice prenotazione:',15,72); pdf.setFont('Courier','bold'); pdf.text(res.code,58,72);
+      pdf.setFont('Helvetica','bold'); pdf.text('Nome e cognome del genitore/tutore:',15,38);
+      pdf.setFont('Helvetica','normal'); pdf.text(res.parentGuardianName || '______________________________',78,38);
+      pdf.setFont('Helvetica','bold'); pdf.text('Qualifica:',15,47);
+      pdf.setFont('Helvetica','normal'); pdf.text(res.parentGuardianRole || '______________________________',34,47);
+      const text = `Il/La sottoscritto/a AUTORIZZA il/la proprio/a figlio/a ${res.nome || '________________'} a lasciare autonomamente l’IIS Primo Levi di Seregno al termine del MiniStage indicato nella prenotazione.`;
+      pdf.text(pdf.splitTextToSize(text,180),15,59);
+      pdf.setFont('Helvetica','bold'); pdf.text('Codice prenotazione:',15,82); pdf.setFont('Courier','bold'); pdf.text(res.code,58,82);
       pdf.setFont('Helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(70,70,80);
-      pdf.text(pdf.splitTextToSize('La scelta dell’uscita autonoma è stata confermata online al momento della prenotazione. La presente pagina deve comunque essere stampata, firmata in originale dal genitore/tutore e consegnata alla scuola.',180),15,84);
-      pdf.setTextColor(30,27,75); pdf.setFontSize(10); pdf.text('Data: ____________________',15,112); pdf.text('Firma autografa del genitore/tutore:',15,135); pdf.line(15,154,100,154);
-      pdf.setFontSize(8); pdf.setTextColor(100,100,110); pdf.text(pdf.splitTextToSize('Consegnare il modulo firmato secondo le indicazioni dell’Istituto. Conservare la prima pagina della prenotazione con il codice di accesso.',180),15,169);
+      pdf.text(pdf.splitTextToSize('La scelta dell’uscita autonoma è stata confermata online al momento della prenotazione. La presente pagina deve essere stampata, firmata in originale dal genitore/tutore e portata il giorno del MiniStage.',180),15,94);
+      pdf.setTextColor(30,27,75); pdf.setFontSize(10); pdf.text('Data: ____________________',15,124); pdf.text('Firma autografa del genitore/tutore:',15,147); pdf.line(15,166,100,166);
+      pdf.setFont('Helvetica','bold'); pdf.setFontSize(9); pdf.setTextColor(120,60,20); pdf.text('ALLEGATO:',15,184);
+      pdf.setFont('Helvetica','normal'); pdf.setTextColor(70,70,80); pdf.text(pdf.splitTextToSize('copia del documento di riconoscimento in corso di validità del genitore/tutore.',158),35,184);
     }
     return pdf;
   }
@@ -519,13 +524,13 @@
     const rest = parts.slice(1).join(' ');
     const promoted = !!(res.waitlistPromotedAt || res.waitlistPromotionStatus === 'Ammesso da scorrimento');
     let subject = `MiniStage IIS Primo Levi - Conferma ${res.code}`;
-    let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e consegnarla alla scuola.' : ''}`;
+    let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
     if (kind === 'reserve') {
       subject = `MiniStage IIS Primo Levi - Iscrizione con riserva ${res.code}`;
       message = `La richiesta ${res.code} è stata registrata con riserva. Posizione indicativa: ${position || 'in aggiornamento'}. Attendere una successiva e-mail di conferma definitiva.`;
     } else if (promoted) {
       subject = `MiniStage IIS Primo Levi - Ammesso da scorrimento ${res.code}`;
-      message = `Il posto è stato assegnato dalla lista d'attesa. La prenotazione ${res.code} è ora confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.`;
+      message = `Il posto è stato assegnato dalla lista d'attesa. La prenotazione ${res.code} è ora confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e portarla il giorno del MiniStage insieme a una copia del documento di riconoscimento in corso di validità del genitore/tutore.' : ''}`;
     } else if (isRetrieval) {
       subject = `MiniStage IIS Primo Levi - Duplicato prenotazione ${res.code}`;
     }
@@ -613,6 +618,7 @@
   }
 
   async function promoteNext(slot) {
+    if (!slot || slot.active === false) return false;
     const locked = await acquireLock(slot.id);
     if (!locked) return false;
     try {
@@ -649,6 +655,7 @@
     try {
       await refreshState();
       for (const slot of slots) {
+        if (slot.active === false) continue;
         for (let i = 0; i < DEFAULT_CAPACITY + 5; i++) {
           const fresh = await snapshotCollection(bookingPath());
           if (!queueFor(slot.id, fresh).length) break;
@@ -899,7 +906,7 @@
       slots=[]; snap.forEach(d=>slots.push({id:d.id,...d.data()})); decorateStages(); renderAdminExtension(); scheduleReconcile(160);
     },err=>console.warn('MiniStage slot listener',err));
     f.onSnapshot(f.collection(core.db, capPath()), snap=>{
-      caps={}; snap.forEach(d=>{const x=d.data();if(x.indirizzo)caps[x.indirizzo]=Number(x.postiMax||DEFAULT_CAPACITY)}); decorateStages();
+      caps={}; snap.forEach(d=>{const x=d.data();if(x.indirizzo)caps[x.indirizzo]=Number(x.postiMax||DEFAULT_CAPACITY)}); decorateStages(); scheduleReconcile(160);
     },err=>console.warn('MiniStage capacità listener',err));
     f.onSnapshot(f.collection(core.db, classPath()), snap=>{
       classes={...defaultClasses}; snap.forEach(d=>{const x=d.data();if(x.indirizzo)classes[x.indirizzo]=String(x.classe||'')}); renderAdminExtension();
