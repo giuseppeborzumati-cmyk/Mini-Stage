@@ -43,6 +43,6 @@ jobs:
           git config user.name "giuseppeborzumati-cmyk"
           git config user.email "giuseppe.borzumati@leviseregno.edu.it"
           git add index.html ministage-complete.js ministage-admin-console-v2.js ministage-admin-console-v2-original.js
-          git rm tools/apply_auto_closure_pergamena_v1.py .github/workflows/apply-auto-closure-pergamena-v1.yml
+          git rm -f tools/apply_auto_closure_pergamena_v1.py .github/workflows/apply-auto-closure-pergamena-v1.yml
           git commit -m "Aggiunge download PDF diretto e chiusura automatica MiniStage"
           git push
