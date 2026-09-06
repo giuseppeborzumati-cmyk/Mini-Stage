@@ -1,0 +1,48 @@
+name: Apply docente one page v4
+on:
+  push:
+    paths:
+      - 'tools/admin-onepage-v4.js'
+      - '.github/workflows/apply-admin-onepage-v4.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply one page docente
+        run: |
+          cp tools/admin-onepage-v4.js ministage-admin-console-v2.js
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('ministage-admin-console-v2.js?v=20260906j','ministage-admin-console-v2.js?v=20260906k')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verify syntax and requested layout
+        run: |
+          node --check ministage-admin-console-v2.js
+          grep -F "2026.09-docente-onepage-v4" ministage-admin-console-v2.js
+          grep -F "Gestione completa MiniStage" ministage-admin-console-v2.js
+          grep -F "Cancella lista d’attesa" ministage-admin-console-v2.js
+          grep -F "Cancella totale database" ministage-admin-console-v2.js
+          grep -F "Cancella date" ministage-admin-console-v2.js
+          grep -F "Cancella tutto" ministage-admin-console-v2.js
+          grep -F "Genera prenotazione" ministage-admin-console-v2.js
+          grep -F "v=20260906k" index.html
+          ! grep -F "Mostra strumenti avanzati" ministage-admin-console-v2.js
+          ! grep -F "Altri strumenti" ministage-admin-console-v2.js
+          echo DOCENTE_ONEPAGE_V4_OK
+      - name: Commit final dashboard
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-admin-console-v2.js
+          git commit -m "Trasforma area docente in dashboard one page" || true
+          git rm tools/admin-onepage-v4.js .github/workflows/apply-admin-onepage-v4.yml
+          git commit -m "Rimuove strumenti temporanei dashboard docente" || true
+          git push
