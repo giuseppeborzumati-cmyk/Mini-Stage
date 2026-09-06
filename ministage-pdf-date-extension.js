@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-pdf-per-data-v1';
+  const VERSION = '2026.09-pdf-per-data-v2';
   const ACTIVE = 'prenotazione';
   const WAITLIST = 'lista_attesa';
   const CHECKED = 'entrato';
@@ -266,8 +266,13 @@
     installed = true;
     window.downloadMiniStageSlotPdf = downloadSlotPdf;
     subscribe();
-    const observer = new MutationObserver(() => render());
-    observer.observe(document.body, { childList: true, subtree: true });
+    const shellRetry = setInterval(() => {
+      if (document.getElementById('mini-page-pdf')) {
+        render();
+        clearInterval(shellRetry);
+      }
+    }, 500);
+    setTimeout(() => { if (document.getElementById('mini-page-pdf')) render(); }, 250);
     window.__MINISTAGE_PDF_DATE_EXTENSION__ = { version: VERSION };
   }
 

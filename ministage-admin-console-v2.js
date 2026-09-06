@@ -20,7 +20,7 @@
   function loadPdfDateExtension() {
     if (document.querySelector('script[data-mini-pdf-date-extension]')) return;
     const ext = document.createElement('script');
-    ext.src = 'ministage-pdf-date-extension.js?v=20260906-pdfdate1';
+    ext.src = 'ministage-pdf-date-extension.js?v=20260906-pdfdate2';
     ext.async = false;
     ext.dataset.miniPdfDateExtension = '1';
     document.body.appendChild(ext);
