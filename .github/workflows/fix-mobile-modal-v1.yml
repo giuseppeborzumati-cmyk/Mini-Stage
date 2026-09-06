@@ -1,0 +1,32 @@
+name: Fix mobile MiniStage modal
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/fix-mobile-modal-v1.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply mobile fix
+        run: python3 tools/fix_mobile_modal_v1.py
+      - name: Verify mobile modal markup
+        run: |
+          grep -q 'max-h-\[calc(100dvh-1.5rem)\]' index.html
+          grep -q 'overflow-y-auto overscroll-contain' index.html
+          grep -q 'sticky bottom-0' index.html
+      - name: Check JavaScript
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+      - name: Commit final files
+        run: |
+          rm -f tools/fix_mobile_modal_v1.py .github/workflows/fix-mobile-modal-v1.yml
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html tools/fix_mobile_modal_v1.py .github/workflows/fix-mobile-modal-v1.yml
+          git commit -m "Corregge scorrimento prenotazione da cellulare"
+          git push
