@@ -1,0 +1,41 @@
+name: Pubblica PDF per data MiniStage
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-pdf-date-v1.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aggiorna cache e verifica file
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='ministage-admin-console-v2.js?v=20260906-licei1'
+          new='ministage-admin-console-v2.js?v=20260906-pdfdate1'
+          if old not in s and new not in s:
+              raise SystemExit('Tag admin non trovato in index.html')
+          p.write_text(s.replace(old,new),encoding='utf-8')
+          PY
+          node --check ministage-admin-console-v2.js
+          node --check ministage-admin-console-v2-original.js
+          node --check ministage-complete.js
+          node --check ministage-pdf-date-extension.js
+          grep -q "ministage-admin-console-v2.js?v=20260906-pdfdate1" index.html
+          grep -q "Scarica PDF" ministage-pdf-date-extension.js
+          grep -q "Liceo Curvatura Economica" ministage-pdf-date-extension.js
+          grep -q "Liceo Scienze Applicate" ministage-pdf-date-extension.js
+          echo VERIFICA_PDF_PER_DATA_OK
+      - name: Pubblica e rimuove workflow temporaneo
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html
+          git rm .github/workflows/publish-pdf-date-v1.yml
+          git commit -m "Pubblica PDF separati per data e percorso"
+          git push
