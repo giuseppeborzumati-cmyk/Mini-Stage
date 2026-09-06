@@ -1,0 +1,55 @@
+name: Finalizza PDF per data MiniStage
+on:
+  push:
+    paths:
+      - '.github/workflows/finalize-pdf-date-v2.yml'
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Corregge rendering e cache
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          ext = Path('ministage-pdf-date-extension.js')
+          s = ext.read_text(encoding='utf-8')
+          s = s.replace("const VERSION = '2026.09-pdf-per-data-v1';", "const VERSION = '2026.09-pdf-per-data-v2';")
+          old = """    subscribe();\n    const observer = new MutationObserver(() => render());\n    observer.observe(document.body, { childList: true, subtree: true });\n    window.__MINISTAGE_PDF_DATE_EXTENSION__ = { version: VERSION };"""
+          new = """    subscribe();\n    const shellRetry = setInterval(() => {\n      if (document.getElementById('mini-page-pdf')) {\n        render();\n        clearInterval(shellRetry);\n      }\n    }, 500);\n    setTimeout(() => { if (document.getElementById('mini-page-pdf')) render(); }, 250);\n    window.__MINISTAGE_PDF_DATE_EXTENSION__ = { version: VERSION };"""
+          if old not in s:
+              raise SystemExit('Blocco MutationObserver non trovato')
+          ext.write_text(s.replace(old, new), encoding='utf-8')
+
+          wrapper = Path('ministage-admin-console-v2.js')
+          w = wrapper.read_text(encoding='utf-8')
+          if 'ministage-pdf-date-extension.js?v=20260906-pdfdate1' not in w:
+              raise SystemExit('Cache extension v1 non trovata')
+          wrapper.write_text(w.replace('ministage-pdf-date-extension.js?v=20260906-pdfdate1','ministage-pdf-date-extension.js?v=20260906-pdfdate2'), encoding='utf-8')
+
+          idx = Path('index.html')
+          h = idx.read_text(encoding='utf-8')
+          if 'ministage-admin-console-v2.js?v=20260906-pdfdate1' not in h:
+              raise SystemExit('Cache wrapper pdfdate1 non trovata')
+          idx.write_text(h.replace('ministage-admin-console-v2.js?v=20260906-pdfdate1','ministage-admin-console-v2.js?v=20260906-pdfdate2'), encoding='utf-8')
+          PY
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          node --check ministage-admin-console-v2-original.js
+          node --check ministage-pdf-date-extension.js
+          ! grep -q "MutationObserver" ministage-pdf-date-extension.js
+          grep -q "pdf-per-data-v2" ministage-pdf-date-extension.js
+          grep -q "pdfdate2" ministage-admin-console-v2.js
+          grep -q "ministage-admin-console-v2.js?v=20260906-pdfdate2" index.html
+          echo FINAL_PDF_DATE_CHECK_OK
+      - name: Pubblica versione finale e pulisce workflow
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-admin-console-v2.js ministage-pdf-date-extension.js
+          git rm .github/workflows/finalize-pdf-date-v2.yml
+          git commit -m "Finalizza PDF separati per data e percorso"
+          git push
