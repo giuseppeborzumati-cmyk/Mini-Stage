@@ -374,8 +374,8 @@
                 <div id="receipt-details" class="w-full border-t border-gray-100 pt-3 space-y-1.5 text-[11px] text-gray-700"></div>
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full pt-2 print-hide">
-                    <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
-                        Stampa o Salva PDF
+                    <button onclick="window.downloadCurrentMiniStagePdf?.()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center text-xs">
+                        Scarica PDF
                     </button>
                     <button onclick="window.goToHome()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition text-xs">
                         Torna alla Home
@@ -819,6 +819,12 @@
                 impostazioni: COLLECTION_IMPOSTAZIONI,
                 capacita: COLLECTION_CONFIG_CAPACITA,
                 promemoria: COLLECTION_CONFIG_PROMEMORIA
+            },
+            endpoints: {
+                email: EMAIL_SCRIPT_DEPLOYMENT_URL,
+                cancellation: CANCELLATION_SCRIPT_URL,
+                reminder: REMINDER_SCRIPT_URL,
+                certificate: CERTIFICATE_SCRIPT_URL
             },
             getBookings: () => allBookings,
             getSlots: () => stageSlots,
@@ -1632,6 +1638,11 @@
                 return;
             }
 
+            if (booking.type === 'uscito') {
+                window.showScannerFeedback(`MiniStage concluso: ${booking.nome} risulta già uscito.`, true);
+                return;
+            }
+
             if (booking.type === 'entrato') {
                 window.showScannerFeedback(`Attenzione: ${booking.nome} è già stato marcato come presente.`, true);
                 return;
@@ -2081,7 +2092,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906j"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906n"></script>
+    <script src="ministage-complete.js?v=20260906k"></script>
+    <script src="ministage-admin-console-v2.js?v=20260906o"></script>
 </body>
 </html>

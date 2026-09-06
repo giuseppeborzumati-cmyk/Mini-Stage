@@ -20,7 +20,7 @@
 
   // Conserva e carica integralmente il pannello docente attuale.
   const adminScript = document.createElement('script');
-  adminScript.src = 'ministage-admin-console-v2-original.js?v=20260906-appscriptrestore1';
+  adminScript.src = 'ministage-admin-console-v2-original.js?v=20260906-autoclose1';
   adminScript.async = false;
   document.body.appendChild(adminScript);
 })();

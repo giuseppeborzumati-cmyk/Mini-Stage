@@ -1,10 +1,11 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-parent-release-v6';
+  const VERSION = '2026.09-auto-closure-v7';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
+  const EXITED = 'uscito';
   const CANCELLED = 'cancellazione';
   const CLASS_COLLECTION = 'config_classi_ministage';
   const LOCK_COLLECTION = 'ministage_slot_locks';
@@ -32,6 +33,8 @@
   let waitlistMode = false;
   let installed = false;
   let reconcileTimer = null;
+  let closureTimer = null;
+  let closureRunning = false;
   let mobileScanner = null;
 
   const esc = (v) => String(v ?? '')
@@ -650,6 +653,14 @@
     }
   }
 
+
+  async function downloadCurrentMiniStagePdf() {
+    const code = String(document.getElementById('receipt-code')?.textContent || '').trim().toUpperCase();
+    if (!code) return window.showMessage?.('Codice prenotazione non disponibile.', true);
+    return downloadMiniStageBookingPdf(code);
+  }
+  window.downloadCurrentMiniStagePdf = downloadCurrentMiniStagePdf;
+
   async function promoteNext(slot) {
     if (!slot || slot.active === false) return false;
     const locked = await acquireLock(slot.id);
@@ -706,6 +717,156 @@
     }
   }
 
+
+  function isoDateFromAny(value) {
+    const raw = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+    return '';
+  }
+
+  function italyLocalEpoch(iso, hour, minute) {
+    const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return 0;
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    const targetUtc = Date.UTC(y, mo - 1, d, Number(hour), Number(minute), 0, 0);
+    let guess = targetUtc;
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    for (let i = 0; i < 3; i++) {
+      const p = Object.fromEntries(fmt.formatToParts(new Date(guess)).filter(x => x.type !== 'literal').map(x => [x.type, x.value]));
+      const localAsUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second || 0));
+      const offset = localAsUtc - guess;
+      guess = targetUtc - offset;
+    }
+    return guess;
+  }
+
+  function closureDueAt(slot) {
+    const iso = isoDateFromAny(slot?.isoDate || slot?.date || slot?.data || slot?.dateStr);
+    if (!iso) return 0;
+    const matches = [...String(slot?.time || slot?.orario || '').matchAll(/(\d{1,2}):(\d{2})/g)];
+    if (!matches.length) return 0;
+    const end = matches[matches.length - 1];
+    const endAt = italyLocalEpoch(iso, Number(end[1]), Number(end[2]));
+    return endAt ? endAt + 5 * 60 * 1000 : 0;
+  }
+
+  async function claimCertificateExit(code) {
+    const ref = f.doc(core.db, `${bookingPath()}/${code}`);
+    return f.runTransaction(core.db, async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return null;
+      const data = { id: snap.id, ...snap.data() };
+      const now = Date.now();
+      if (data.type !== CHECKED || data.certificateSent === true) return null;
+      const busy = Number(data.certificateProcessingAt || 0) > now - 2 * 60 * 1000;
+      if (busy && data.certificateProcessingOwner !== ownerId) return null;
+      tx.set(ref, { certificateProcessingAt: now, certificateProcessingOwner: ownerId, certificateError: '' }, { merge: true });
+      return data;
+    });
+  }
+
+  async function sendFinalCertificate(student) {
+    const url = core?.endpoints?.certificate;
+    if (!url) throw new Error('Endpoint pergamena non configurato');
+    const parts = String(student.nome || '').trim().split(/\s+/).filter(Boolean);
+    const first = parts.shift() || '';
+    const rest = parts.join(' ');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        email: student.email,
+        nome: first,
+        cognome: rest,
+        codice_prenotazione: student.code,
+        data: student.stageDate,
+        orario: student.stageTime,
+        attivita: student.indirizzo,
+        classe_assegnata: resolvedClass(student.indirizzo, student.classeAssegnata),
+        tipo: 'attestato_partecipazione',
+        stato: 'MINISTAGE CONCLUSO - USCITO'
+      })
+    });
+    if (!response.ok) throw new Error(`Apps Script HTTP ${response.status}`);
+  }
+
+  async function processDueClosures() {
+    if (closureRunning || !core?.db || !f?.runTransaction) return;
+    closureRunning = true;
+    try {
+      await refreshState();
+      const now = Date.now();
+      const dueSlots = slots.filter(slot => {
+        const due = closureDueAt(slot);
+        return due > 0 && now >= due;
+      });
+      for (const slot of dueSlots) {
+        const due = closureDueAt(slot);
+        if (slot.active !== false || slot.closed !== true || slot.closureStatus !== 'chiuso') {
+          await f.setDoc(f.doc(core.db, `${slotPath()}/${slot.id}`), {
+            active: false,
+            closed: true,
+            closureStatus: 'chiuso',
+            closureDueAt: due,
+            closedAt: Number(slot.closedAt || 0) || now,
+            closureReason: 'fine_ministage_+5min'
+          }, { merge: true });
+        }
+        const entered = bookings.filter(b => b.slotId === slot.id && b.type === CHECKED && b.certificateSent !== true);
+        for (const row of entered) {
+          const student = await claimCertificateExit(row.code).catch(() => null);
+          if (!student) continue;
+          const ref = f.doc(core.db, `${bookingPath()}/${student.code}`);
+          try {
+            await sendFinalCertificate(student);
+            const sentAt = Date.now();
+            await f.setDoc(ref, {
+              type: EXITED,
+              exitedAt: sentAt,
+              certificateSent: true,
+              certificateSentAt: sentAt,
+              certificateProcessingAt: 0,
+              certificateProcessingOwner: '',
+              certificateError: '',
+              closureSource: 'automatico_5_minuti_dopo_fine'
+            }, { merge: true });
+          } catch (err) {
+            await f.setDoc(ref, {
+              certificateProcessingAt: 0,
+              certificateProcessingOwner: '',
+              certificateErrorAt: Date.now(),
+              certificateError: String(err?.message || err).slice(0, 220)
+            }, { merge: true }).catch(() => {});
+            console.warn('MiniStage: invio pergamena non completato', student.code, err);
+          }
+        }
+      }
+      if (dueSlots.length) {
+        await refreshState();
+        decorateStages();
+        renderAdminExtension();
+      }
+    } catch (e) {
+      console.warn('MiniStage: controllo chiusura automatica non completato', e);
+    } finally {
+      closureRunning = false;
+    }
+  }
+
+  function scheduleAutoClosure() {
+    if (closureTimer) clearInterval(closureTimer);
+    setTimeout(processDueClosures, 900);
+    closureTimer = setInterval(processDueClosures, 30000);
+  }
+
+  window.runMiniStageAutoClosure = processDueClosures;
+  window.getMiniStageClosureDueAt = closureDueAt;
+
   function scheduleReconcile(delay=180) {
     clearTimeout(reconcileTimer);
     reconcileTimer = setTimeout(reconcileAll, delay);
@@ -750,6 +911,7 @@
 
   function statusLabel(b) {
     if (b.type === WAITLIST) return 'Con riserva';
+    if (b.type === EXITED) return 'Uscito';
     if (b.type === CHECKED) return 'Presente';
     if (b.type === CANCELLED) return 'Annullata';
     if (b.waitlistPromotedAt) return 'Ammesso da scorrimento';
@@ -1003,6 +1165,7 @@
       subscribe();
       window.__MINISTAGE_COMPLETE__.dataReady=true;
       scheduleReconcile(400);
+      scheduleAutoClosure();
     } catch(e) {
       console.warn('MiniStage: sincronizzazione iniziale non completata; interfaccia disponibile in modalità resiliente.',e);
       if(scannerToken){

@@ -1,10 +1,11 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-docente-pagine-v6';
+  const VERSION = '2026.09-docente-pagine-v7';
   const ACTIVE = 'prenotazione';
   const WAITLIST = 'lista_attesa';
   const CHECKED = 'entrato';
+  const EXITED = 'uscito';
   const CANCELLED = 'cancellazione';
   const CLASS_COLLECTION = 'config_classi_ministage';
   const SCANNER_COLLECTION = 'scanner_sessions';
@@ -91,6 +92,7 @@
 
   function statusLabel(b) {
     if (b.type === WAITLIST) return 'Lista d’attesa';
+    if (b.type === EXITED) return 'Uscito';
     if (b.type === CHECKED) return 'Presente';
     if (b.type === CANCELLED) return 'Annullata';
     if (b.waitlistPromotedAt || b.waitlistPromotionStatus === 'Ammesso da scorrimento') return 'Ammesso da scorrimento';
@@ -99,6 +101,7 @@
 
   function statusBadge(b) {
     if (b.type === WAITLIST) return 'bg-purple-100 text-purple-800';
+    if (b.type === EXITED) return 'bg-teal-100 text-teal-800';
     if (b.type === CHECKED) return 'bg-green-100 text-green-800';
     if (b.type === CANCELLED) return 'bg-red-100 text-red-800';
     if (b.waitlistPromotedAt) return 'bg-fuchsia-100 text-fuchsia-800';
@@ -219,8 +222,9 @@
           ${pageCard('calendar', 4, 'Calendario e capienze', 'Date Firebase, attivazione, modifica, capienze e nuova data.', 'border-sky-500')}
           ${pageCard('auth', 5, 'Autorizzazioni', 'Uscita autonoma e controllo dei moduli cartacei.', 'border-orange-500')}
           ${pageCard('scanner', 6, 'Scanner accoglienza', 'QR smartphone, sessioni attive e registrazione presenze.', 'border-cyan-500')}
-          ${pageCard('pdf', 7, 'PDF ed elenchi', 'Elenchi ufficiali per classi e lista d’attesa.', 'border-red-500')}
-          ${pageCard('data', 8, 'Gestione dati', 'Operazioni protette di cancellazione e azzeramento.', 'border-slate-700')}
+          ${pageCard('closure', 7, 'Chiusura e pergamene', 'Invio automatico pergamena a +5 minuti, stato Uscito e chiusura MiniStage.', 'border-teal-500')}
+          ${pageCard('pdf', 8, 'PDF ed elenchi', 'Elenchi ufficiali per classi e lista d’attesa.', 'border-red-500')}
+          ${pageCard('data', 9, 'Gestione dati', 'Operazioni protette di cancellazione e azzeramento.', 'border-slate-700')}
         </div>
       </section>
 
@@ -338,6 +342,19 @@
         </div>
       </section>
 
+
+      <section id="mini-page-closure" data-mini-page="closure" class="hidden space-y-4">
+        <div class="glass-card p-5 border-l-4 border-teal-500 space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div><h2 class="text-lg font-black text-teal-950">Chiusura automatica MiniStage e pergamene</h2><p class="text-xs text-gray-500">Cinque minuti dopo l’orario di fine, la data viene chiusa. Agli studenti segnati Presenti viene inviata la pergamena e, dopo l’invio riuscito, lo stato passa a Uscito.</p></div>
+            <button type="button" onclick="window.runMiniStageAutoClosure?.()" class="bg-teal-600 text-white px-4 py-2.5 rounded-xl text-xs font-black">Controlla ora</button>
+          </div>
+          <div class="rounded-xl border border-teal-100 bg-teal-50/50 p-3 text-[10px] text-teal-900 leading-relaxed"><strong>Automazione attiva:</strong> il controllo viene eseguito ogni 30 secondi mentre il sito è aperto. Se il browser è stato chiuso, il primo accesso successivo recupera automaticamente eventuali chiusure rimaste in sospeso, senza reinviare pergamene già registrate.</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3"><div class="rounded-xl border border-green-100 bg-white p-4"><p class="text-[9px] uppercase font-black text-green-600">Presenti da chiudere</p><p id="mini-closure-present" class="text-3xl font-black text-green-950">0</p></div><div class="rounded-xl border border-teal-100 bg-white p-4"><p class="text-[9px] uppercase font-black text-teal-600">Usciti / pergamena inviata</p><p id="mini-closure-exited" class="text-3xl font-black text-teal-950">0</p></div><div class="rounded-xl border border-slate-100 bg-white p-4"><p class="text-[9px] uppercase font-black text-slate-600">MiniStage chiusi</p><p id="mini-closure-closed" class="text-3xl font-black text-slate-950">0</p></div></div>
+          <div id="mini-pages-closure-list" class="space-y-3"></div>
+        </div>
+      </section>
+
       <section id="mini-page-pdf" data-mini-page="pdf" class="hidden space-y-4">
         <div class="glass-card p-5 border-l-4 border-red-500 space-y-4"><div><h2 class="text-lg font-black text-red-950">PDF ed elenchi</h2><p class="text-xs text-gray-500">Genera gli elenchi ufficiali senza entrare in altre pagine.</p></div><div class="flex flex-wrap gap-2"><button type="button" onclick="window.downloadAllClassListsPdf?.()" class="bg-red-600 text-white px-3 py-2.5 rounded-xl text-xs font-black">PDF tutte le classi</button><button type="button" onclick="window.downloadWaitlistPdf?.()" class="bg-purple-600 text-white px-3 py-2.5 rounded-xl text-xs font-black">PDF lista d’attesa</button><div id="mini-pages-class-pdfs" class="flex flex-wrap gap-2"></div></div></div>
       </section>
@@ -369,6 +386,7 @@
     calendar: ['Calendario e capienze', 'Tutte le date Firebase, comprese eventuali date prova.'],
     auth: ['Autorizzazioni', 'Uscita autonoma e documentazione cartacea.'],
     scanner: ['Scanner accoglienza', 'QR temporanei e registrazione delle presenze.'],
+    closure: ['Chiusura e pergamene', 'Invio automatico a +5 minuti e passaggio da Presente a Uscito.'],
     pdf: ['PDF ed elenchi', 'Generazione degli elenchi ufficiali.'],
     data: ['Gestione dati', 'Operazioni protette di cancellazione e azzeramento.']
   };
@@ -422,9 +440,10 @@
       const active = activeBookings();
       const waits = waitBookings();
       const checked = state.bookings.filter(b => b.type === CHECKED);
+      const exited = state.bookings.filter(b => b.type === EXITED);
       const pendingDocs = active.filter(b => b.exitMode === 'autonoma' && !b.authorizationPaperReceived);
       const cards = [
-        ['Iscritti attivi', active.length], ['Presenti', checked.length], ['Lista d’attesa', waits.length], ['Annullati', cancelledBookings().length], ['Date attive', state.slots.filter(s => s.active !== false).length], ['Moduli da ritirare', pendingDocs.length]
+        ['Iscritti attivi', active.length], ['Presenti', checked.length], ['Usciti', exited.length], ['Lista d’attesa', waits.length], ['Annullati', cancelledBookings().length], ['Date attive', state.slots.filter(s => s.active !== false).length], ['Moduli da ritirare', pendingDocs.length]
       ];
       summary.innerHTML = cards.map(([label,val]) => `<div class="glass-card p-4"><p class="text-[9px] uppercase font-black text-gray-500">${esc(label)}</p><p class="text-3xl font-black text-indigo-950">${Number(val)}</p></div>`).join('');
     }
@@ -567,6 +586,30 @@
     root.innerHTML = rows.map(b => `<article class="rounded-xl border ${b.authorizationPaperReceived ? 'border-green-100 bg-green-50/30' : 'border-orange-100 bg-white'} p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"><div><div class="flex flex-wrap gap-2 items-center"><strong class="text-xs text-orange-950">${esc(b.nome)}</strong><span class="${b.exitAuthorizationAccepted || b.declarationAccepted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-0.5 rounded-full text-[9px] font-black">${b.exitAuthorizationAccepted || b.declarationAccepted ? 'Autorizzazione online acquisita' : 'Autorizzazione online non registrata'}</span><span class="${b.authorizationPaperReceived ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'} px-2 py-0.5 rounded-full text-[9px] font-black">${b.authorizationPaperReceived ? 'Modulo firmato ricevuto' : 'Modulo da consegnare'}</span></div><p class="text-[10px] text-gray-500 mt-1">${esc(b.code)} · ${esc(b.indirizzo)} · ${esc(b.stageDate)} ${esc(b.stageTime)}</p><p class="text-[10px] text-gray-600">Genitore/tutore: <strong>${esc(b.parentGuardianName || '—')}</strong>${b.parentGuardianRole ? ` (${esc(b.parentGuardianRole)})` : ''}</p></div><div class="flex flex-wrap gap-2"><button type="button" onclick="window.downloadMiniStageBookingPdf?.('${esc(b.code)}')" class="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-black">PDF + autorizzazione</button>${!b.authorizationPaperReceived ? `<button type="button" onclick="window.miniTeacherMarkAuthReceived('${esc(b.code)}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black">Segna ricevuto</button>` : ''}</div></article>`).join('') || '<p class="text-xs text-gray-400 italic">Nessuna uscita autonoma registrata.</p>';
   }
 
+
+  function renderClosure() {
+    const present = state.bookings.filter(b => b.type === CHECKED);
+    const exited = state.bookings.filter(b => b.type === EXITED);
+    const closed = state.slots.filter(s => s.closed === true || s.closureStatus === 'chiuso');
+    const p = document.getElementById('mini-closure-present'); if (p) p.textContent = String(present.length);
+    const e = document.getElementById('mini-closure-exited'); if (e) e.textContent = String(exited.length);
+    const c = document.getElementById('mini-closure-closed'); if (c) c.textContent = String(closed.length);
+    const root = document.getElementById('mini-pages-closure-list');
+    if (!root) return;
+    const rows = [...state.slots].sort((a,b) => (window.getMiniStageClosureDueAt?.(a) || 0) - (window.getMiniStageClosureDueAt?.(b) || 0));
+    root.innerHTML = rows.map(s => {
+      const due = Number(window.getMiniStageClosureDueAt?.(s) || 0);
+      const slotPresent = present.filter(b => b.slotId === s.id).length;
+      const slotExited = exited.filter(b => b.slotId === s.id).length;
+      const errors = state.bookings.filter(b => b.slotId === s.id && b.certificateError).length;
+      const isClosed = s.closed === true || s.closureStatus === 'chiuso';
+      const now = Date.now();
+      const label = isClosed ? 'Chiuso' : due && now >= due ? 'Chiusura in elaborazione' : due ? `Chiusura prevista ${new Date(due).toLocaleString('it-IT')}` : 'Orario non interpretabile';
+      const cls = isClosed ? 'bg-slate-100 text-slate-800' : due && now >= due ? 'bg-orange-100 text-orange-800' : 'bg-teal-100 text-teal-800';
+      return `<article class="rounded-xl border border-teal-100 bg-white p-4"><div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><strong class="text-xs text-teal-950">${esc(s.indirizzo || 'MiniStage')}</strong><span class="${cls} px-2 py-0.5 rounded-full text-[9px] font-black">${esc(label)}</span></div><p class="text-[10px] text-gray-500 mt-1">${esc(s.day || weekdayIt(slotIso(s)))} ${esc(s.dateStr || formatDateIt(slotIso(s)))} · ${esc(s.time || '')}</p></div><div class="grid grid-cols-3 gap-2 text-center min-w-[260px]"><div><p class="text-lg font-black text-green-800">${slotPresent}</p><p class="text-[8px] uppercase text-gray-400">Presenti</p></div><div><p class="text-lg font-black text-teal-800">${slotExited}</p><p class="text-[8px] uppercase text-gray-400">Usciti</p></div><div><p class="text-lg font-black ${errors ? 'text-red-700' : 'text-gray-700'}">${errors}</p><p class="text-[8px] uppercase text-gray-400">Errori mail</p></div></div></div></article>`;
+    }).join('') || '<p class="text-xs text-gray-400 italic text-center py-8">Nessuna data MiniStage configurata.</p>';
+  }
+
   function renderScanner() {
     const qrRoot = document.getElementById('mini-pages-scanner-qr');
     if (qrRoot && currentScanner) {
@@ -588,6 +631,7 @@
     renderCapacities();
     renderCalendar();
     renderAuth();
+    renderClosure();
     renderScanner();
     showBookingSub(bookingSubpage);
   }
