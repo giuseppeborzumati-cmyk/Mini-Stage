@@ -259,10 +259,13 @@
                         <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
                             <span class="flex items-center">
                                 <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
-                                Liceo Scientifico - Scienze Applicate
+                                Liceo Scientifico Scienze Applicate
                             </span>
                             <span class="text-[9px] text-indigo-500 font-bold tracking-wider uppercase">Liceo</span>
                         </h4>
+                        <p class="mb-2 rounded-xl bg-indigo-50/70 px-3 py-2 text-[10px] leading-relaxed text-indigo-900 border border-indigo-100">
+                            Percorso liceale con competenze avanzate nell’area scientifico-tecnologica, con particolare attenzione a matematica, fisica, chimica, biologia, informatica e alle loro applicazioni.
+                        </p>
                         <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-liceo"></div>
                     </div>
 
@@ -271,10 +274,13 @@
                         <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
                             <span class="flex items-center">
                                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-                                Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica
+                                Liceo Scientifico Opzione Scienze Applicate - Curvatura Economica
                             </span>
                             <span class="text-[9px] text-emerald-600 font-bold tracking-wider uppercase">Liceo</span>
                         </h4>
+                        <p class="mb-2 rounded-xl bg-emerald-50/70 px-3 py-2 text-[10px] leading-relaxed text-emerald-900 border border-emerald-100">
+                            Percorso distinto delle Scienze Applicate con <strong>2 ore di Economia</strong> e <strong>1 ora in meno di Scienze naturali</strong> rispetto al percorso ordinario.
+                        </p>
                         <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-curvatura-economica"></div>
                     </div>
 
@@ -799,6 +805,14 @@
             "Sistema Moda": "container-moda"
         };
 
+        const INDIRIZZI_LABELS = {
+            "Liceo Scientifico - Scienze Applicate": "Liceo Scientifico Scienze Applicate",
+            "Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica": "Liceo Scientifico Opzione Scienze Applicate - Curvatura Economica"
+        };
+        window.getIndirizzoLabel = function(indirizzo) {
+            return INDIRIZZI_LABELS[indirizzo] || indirizzo || '';
+        };
+
         let userId = null;
         let isAuthReady = false;
         let isInitialLoad = true; // Flag fondamentale per evitare bug di ritorno automatico alla Home
@@ -869,11 +883,11 @@
             
             const filterIndirizzo = document.getElementById('filter-indirizzo');
             if(filterIndirizzo) {
-                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+                filterIndirizzo.innerHTML = '<option value="">Tutti gli Indirizzi</option>' + INDIRIZZI_MAPPING.map(i => `<option value="${i}">${window.getIndirizzoLabel(i)}</option>`).join('');
             }
             const addDropdown = document.getElementById('new-slot-indirizzo');
             if (addDropdown) {
-                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${i}</option>`).join('');
+                addDropdown.innerHTML = INDIRIZZI_MAPPING.map(i => `<option value="${i}">${window.getIndirizzoLabel(i)}</option>`).join('');
             }
             window.renderCapacitiesConfigInputs();
             window.renderSlotManagementTable();
@@ -1854,7 +1868,7 @@
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: INDIRIZZI_MAPPING.map(m => m.substring(0, 15) + '...'),
+                    labels: INDIRIZZI_MAPPING.map(m => window.getIndirizzoLabel(m).substring(0, 22) + '...'),
                     datasets: [{
                         label: 'Iscritti attivi',
                         data: INDIRIZZI_MAPPING.map(ind => counts[ind]),
@@ -1948,7 +1962,7 @@
 
             list.innerHTML = stageSlots.map(s => `
                 <tr class="border-b border-gray-50 hover:bg-indigo-50/10">
-                    <td class="p-3 font-semibold">${s.indirizzo}</td>
+                    <td class="p-3 font-semibold">${window.getIndirizzoLabel(s.indirizzo)}</td>
                     <td class="p-3">${s.day}</td>
                     <td class="p-3 font-mono">${s.dateStr}</td>
                     <td class="p-3 font-mono">${s.time}</td>
@@ -2192,7 +2206,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906k"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906o"></script>
+    <script src="ministage-complete.js?v=20260906-licei1"></script>
+    <script src="ministage-admin-console-v2.js?v=20260906-licei1"></script>
 </body>
 </html>

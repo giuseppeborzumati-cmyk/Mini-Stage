@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-auto-closure-v7';
+  const VERSION = '2026.09-licei-separati-v8';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -12,7 +12,7 @@
   const SCANNER_COLLECTION = 'scanner_sessions';
   const EMAIL_URL = 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec';
   const DEFAULT_CAPACITY = 25;
-  const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica';
+  const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica';
   const ownerId = `WEB-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
   const defaultClasses = {

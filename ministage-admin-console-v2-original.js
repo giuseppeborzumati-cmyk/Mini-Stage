@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-docente-pagine-v7';
+  const VERSION = '2026.09-docente-licei-v8';
   const ACTIVE = 'prenotazione';
   const WAITLIST = 'lista_attesa';
   const CHECKED = 'entrato';
@@ -11,7 +11,7 @@
   const SCANNER_COLLECTION = 'scanner_sessions';
   const DEFAULT_CAPACITY = 25;
   const SCANNER_TTL_MS = 8 * 60 * 60 * 1000;
-  const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica';
+  const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica';
 
   const defaultClasses = {
     'Liceo Scientifico - Scienze Applicate': '1L Liceo Scienze Applicate',
