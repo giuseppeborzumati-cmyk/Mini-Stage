@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-admin-console-v2';
+  const VERSION = '2026.09-admin-console-exit-auth-v2';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -281,8 +281,12 @@
     if (q) rows = rows.filter(b => `${b.nome || ''} ${b.code || ''} ${b.email || ''} ${b.indirizzo || ''}`.toLowerCase().includes(q));
     root.innerHTML = rows.map(b => `
       <div class="p-3 rounded-xl border border-indigo-100 bg-white flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-indigo-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.type === CHECKED ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}">${esc(statusLabel(b))}</span></div><p class="text-[10px] text-gray-500 font-mono">${esc(b.code)} · ${esc(b.indirizzo)}</p><p class="text-[10px] text-gray-500">${esc(slotLabel(b))} · ${esc(b.email || '')}</p></div>
-        <div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Ricevuta</button>${b.type === ACTIVE ? `<button type="button" onclick="window.miniAdminCheckIn('${esc(b.code)}')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna presente</button>` : ''}</div>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-indigo-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.type === CHECKED ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}">${esc(statusLabel(b))}</span>${b.exitMode === 'autonoma' ? '<span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">Uscita autonoma</span>' : ''}</div>
+          <p class="text-[10px] text-gray-500 font-mono">${esc(b.code)} · ${esc(b.indirizzo)}</p><p class="text-[10px] text-gray-500">${esc(slotLabel(b))} · ${esc(b.email || '')}</p>
+          ${b.exitMode === 'autonoma' ? `<p class="text-[10px] mt-1"><span class="text-green-700 font-bold">Autorizzazione online acquisita</span> · <span class="${b.authorizationPaperReceived ? 'text-green-700' : 'text-orange-700'} font-bold">${b.authorizationPaperReceived ? 'Modulo firmato ricevuto' : 'Modulo firmato da consegnare'}</span>${b.parentGuardianName ? ` · Genitore/tutore: ${esc(b.parentGuardianName)}${b.parentGuardianRole ? ` (${esc(b.parentGuardianRole)})` : ''}` : ''}</p>` : b.exitMode === 'ritiro_adulto' ? `<p class="text-[10px] mt-1 text-gray-600">Ritiro adulto: ${esc(b.pickupAdultName || 'da verificare')}</p>` : ''}
+        </div>
+        <div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Dettaglio prenotazione</button>${b.exitMode === 'autonoma' ? `<button type="button" onclick="window.downloadMiniStageBookingPdf?.('${esc(b.code)}')" class="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">PDF + autorizzazione</button>` : ''}${b.type === ACTIVE ? `<button type="button" onclick="window.miniAdminCheckIn('${esc(b.code)}')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna presente</button>` : ''}</div>
       </div>`).join('') || '<p class="text-xs text-gray-400 italic text-center py-8">Nessun iscritto corrispondente.</p>';
   }
 
@@ -332,8 +336,10 @@
   function renderAuth() {
     const root = document.getElementById('mini-v2-auth-list');
     if (!root) return;
-    const docs = state.bookings.filter(b => b.type !== CANCELLED && b.exitMode === 'autonoma' && b.declarationAccepted && !b.authorizationPaperReceived);
-    root.innerHTML = docs.map(b => `<div class="p-3 rounded-xl border border-orange-100 bg-white flex justify-between gap-3 items-center"><div><strong class="text-xs text-orange-950">${esc(b.nome)}</strong><p class="text-[10px] text-gray-500 font-mono">${esc(b.code)}</p></div><button type="button" onclick="window.markAuthorizationPaperReceived?.('${esc(b.code)}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Documenti ricevuti</button></div>`).join('') || '<p class="text-xs text-gray-400 italic">Nessun documento in attesa.</p>';
+    const docs = state.bookings
+      .filter(b => b.type !== CANCELLED && b.exitMode === 'autonoma' && (b.declarationAccepted || b.exitAuthorizationAccepted))
+      .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    root.innerHTML = docs.map(b => `<div class="p-3 rounded-xl border ${b.authorizationPaperReceived ? 'border-green-100 bg-green-50/30' : 'border-orange-100 bg-white'} flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"><div><div class="flex flex-wrap gap-2 items-center"><strong class="text-xs text-orange-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-800">Autorizzazione online acquisita</span><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.authorizationPaperReceived ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}">${b.authorizationPaperReceived ? 'Modulo firmato ricevuto' : 'Modulo da consegnare'}</span></div><p class="text-[10px] text-gray-500 font-mono mt-1">${esc(b.code)} · ${esc(b.indirizzo)} · ${esc(slotLabel(b))}</p><p class="text-[10px] text-gray-600">Genitore/tutore: <strong>${esc(b.parentGuardianName || 'non indicato')}</strong>${b.parentGuardianRole ? ` (${esc(b.parentGuardianRole)})` : ''}</p></div><div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Dettaglio</button><button type="button" onclick="window.downloadMiniStageBookingPdf?.('${esc(b.code)}')" class="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">PDF + autorizzazione</button>${!b.authorizationPaperReceived ? `<button type="button" onclick="window.markAuthorizationPaperReceived?.('${esc(b.code)}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna modulo ricevuto</button>` : ''}</div></div>`).join('') || '<p class="text-xs text-gray-400 italic">Nessuna autorizzazione di uscita autonoma registrata.</p>';
   }
 
   function renderScannerSessions() {
