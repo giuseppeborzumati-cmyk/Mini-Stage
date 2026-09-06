@@ -1,0 +1,255 @@
+name: Apply MiniStage exit authorization v2
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/apply-exit-authorization-v2.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch authorization flow and teacher visibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('ministage-complete.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const VERSION = '2026.09-clean-monolith-v1';", "const VERSION = '2026.09-exit-authorization-v2';")
+
+          old = '''      <p class="text-[10px] font-black text-indigo-800 uppercase tracking-wide">Uscita al termine del MiniStage</p>
+      <select id="mini-exit-mode" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs" required>
+        <option value="">Seleziona modalità di uscita</option>
+        <option value="autonoma">Può uscire autonomamente</option>
+        <option value="ritiro_adulto">Deve attendere un adulto</option>
+      </select>
+      <input id="mini-parent-name" type="text" placeholder="Nome e cognome del genitore/tutore" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs">
+      <input id="mini-parent-role" type="text" placeholder="Ruolo del dichiarante (es. madre, padre, tutore)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs">
+      <input id="mini-pickup-name" type="text" placeholder="Adulto incaricato del ritiro (se previsto)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs hidden">
+      <label class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed">
+        <input id="mini-declaration" type="checkbox" class="mt-0.5">
+        <span>Dichiaro che i dati inseriti sono corretti e prendo visione delle modalità di uscita. Per l'uscita autonoma il documento PDF dovrà essere stampato, firmato a mano e consegnato alla scuola.</span>
+      </label>`;
+    fields.insertAdjacentElement('afterend', block);
+    document.getElementById('mini-exit-mode')?.addEventListener('change', (e) => {
+      const pickup = document.getElementById('mini-pickup-name');
+      pickup?.classList.toggle('hidden', e.target.value !== 'ritiro_adulto');
+    });'''
+          new = '''      <p class="text-[10px] font-black text-indigo-800 uppercase tracking-wide">Uscita al termine del MiniStage</p>
+      <select id="mini-exit-mode" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs" required>
+        <option value="">Seleziona modalità di uscita</option>
+        <option value="autonoma">Autorizzo l'uscita autonoma al termine del MiniStage</option>
+        <option value="ritiro_adulto">Ritiro da parte di un adulto incaricato</option>
+      </select>
+      <input id="mini-parent-name" type="text" placeholder="Nome e cognome del genitore/tutore" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs">
+      <input id="mini-parent-role" type="text" placeholder="Ruolo del dichiarante (es. madre, padre, tutore)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs">
+      <input id="mini-pickup-name" type="text" placeholder="Adulto incaricato del ritiro (se previsto)" class="w-full p-2.5 rounded-lg border border-indigo-100 bg-white text-xs hidden">
+      <div id="mini-exit-notice" class="hidden rounded-xl border border-orange-200 bg-orange-50 p-3 text-[10px] leading-relaxed text-orange-900">
+        <strong>Uscita autonoma:</strong> il PDF inviato con la conferma contiene una seconda pagina di autorizzazione. La pagina deve essere stampata, firmata dal genitore/tutore e consegnata alla scuola.
+      </div>
+      <label class="flex items-start gap-2 text-[10px] text-gray-700 leading-relaxed rounded-xl border border-indigo-100 bg-white p-3">
+        <input id="mini-declaration" type="checkbox" class="mt-0.5">
+        <span id="mini-declaration-text">Dichiaro che i dati inseriti sono corretti e confermo la modalità di uscita selezionata.</span>
+      </label>`;
+    fields.insertAdjacentElement('afterend', block);
+    const updateExitDeclaration = () => {
+      const mode = document.getElementById('mini-exit-mode')?.value || '';
+      const pickup = document.getElementById('mini-pickup-name');
+      const notice = document.getElementById('mini-exit-notice');
+      const text = document.getElementById('mini-declaration-text');
+      pickup?.classList.toggle('hidden', mode !== 'ritiro_adulto');
+      notice?.classList.toggle('hidden', mode !== 'autonoma');
+      if (text) {
+        text.innerHTML = mode === 'autonoma'
+          ? '<strong>Autorizzo espressamente mio/a figlio/a a lasciare autonomamente l’IIS Primo Levi al termine del MiniStage.</strong> Dichiaro di essere il genitore/tutore indicato e prendo atto che la seconda pagina del PDF ricevuto via e-mail dovrà essere stampata, firmata e consegnata alla scuola.'
+          : mode === 'ritiro_adulto'
+            ? '<strong>Confermo che mio/a figlio/a non uscirà autonomamente</strong> e dovrà attendere l’adulto incaricato indicato nel modulo.'
+            : 'Dichiaro che i dati inseriti sono corretti e confermo la modalità di uscita selezionata.';
+      }
+    };
+    document.getElementById('mini-exit-mode')?.addEventListener('change', updateExitDeclaration);
+    updateExitDeclaration();'''
+          if old not in s:
+              raise SystemExit('Blocco autorizzazione originale non trovato')
+          s=s.replace(old,new,1)
+
+          s=s.replace("if (!d.exitMode || !d.parentGuardianName || !d.parentGuardianRole || !d.declarationAccepted) return 'Completa la sezione relativa all’uscita e alla dichiarazione.';",
+                      "if (!d.exitMode || !d.parentGuardianName || !d.parentGuardianRole) return 'Completa la sezione relativa all’uscita.';\n    if (!d.declarationAccepted) return d.exitMode === 'autonoma' ? 'Per proseguire devi spuntare l’autorizzazione esplicita all’uscita autonoma.' : 'Per proseguire devi confermare la modalità di uscita selezionata.';")
+
+          old_data = """        declarationAccepted: true,
+        declarationTimestamp: timestamp,
+        declarationVersion: 'MiniStage-2026-v1',
+        authorizationPaperReceived: false"""
+          new_data = """        declarationAccepted: true,
+        declarationTimestamp: timestamp,
+        declarationVersion: 'MiniStage-2026-v2',
+        exitAuthorizationAccepted: true,
+        exitAuthorizationMode: d.exitMode,
+        exitAuthorizationAcceptedAt: timestamp,
+        exitAuthorizationVersion: 'MiniStage-uscita-autorizzazione-v2',
+        authorizationPaperRequired: d.exitMode === 'autonoma',
+        authorizationPaperReceived: false"""
+          if old_data not in s:
+              raise SystemExit('Blocco salvataggio autorizzazione non trovato')
+          s=s.replace(old_data,new_data,1)
+
+          old_pdf = """      const text = `Il/La sottoscritto/a ${res.parentGuardianName || '________________'}, in qualità di ${res.parentGuardianRole || '________________'}, dichiara di aver indicato nel modulo di prenotazione l’uscita autonoma dello/a studente/ssa ${res.nome || '________________'} al termine del MiniStage presso l’IIS Primo Levi di Seregno.`;
+      pdf.text(pdf.splitTextToSize(text,180),15,38);
+      pdf.setFont('Helvetica','bold'); pdf.text('Codice prenotazione:',15,72); pdf.setFont('Courier','bold'); pdf.text(res.code,58,72);
+      pdf.setFont('Helvetica','normal'); pdf.text('Data: ____________________',15,95); pdf.text('Firma autografa del genitore/tutore:',15,118); pdf.line(15,137,100,137);
+      pdf.setFontSize(8); pdf.setTextColor(100,100,110); pdf.text(pdf.splitTextToSize('Stampare, firmare a mano e consegnare questo foglio alla scuola secondo le indicazioni dell’Istituto.',180),15,152);"""
+          new_pdf = """      const text = `Il/La sottoscritto/a ${res.parentGuardianName || '________________'}, in qualità di ${res.parentGuardianRole || '________________'}, AUTORIZZA il/la proprio/a figlio/a ${res.nome || '________________'} a lasciare autonomamente l’IIS Primo Levi di Seregno al termine del MiniStage indicato nella prenotazione.`;
+      pdf.text(pdf.splitTextToSize(text,180),15,38);
+      pdf.setFont('Helvetica','bold'); pdf.text('Codice prenotazione:',15,72); pdf.setFont('Courier','bold'); pdf.text(res.code,58,72);
+      pdf.setFont('Helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(70,70,80);
+      pdf.text(pdf.splitTextToSize('La scelta dell’uscita autonoma è stata confermata online al momento della prenotazione. La presente pagina deve comunque essere stampata, firmata in originale dal genitore/tutore e consegnata alla scuola.',180),15,84);
+      pdf.setTextColor(30,27,75); pdf.setFontSize(10); pdf.text('Data: ____________________',15,112); pdf.text('Firma autografa del genitore/tutore:',15,135); pdf.line(15,154,100,154);
+      pdf.setFontSize(8); pdf.setTextColor(100,100,110); pdf.text(pdf.splitTextToSize('Consegnare il modulo firmato secondo le indicazioni dell’Istituto. Conservare la prima pagina della prenotazione con il codice di accesso.',180),15,169);"""
+          if old_pdf not in s:
+              raise SystemExit('Seconda pagina PDF non trovata')
+          s=s.replace(old_pdf,new_pdf,1)
+
+          old_msg = "let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.`;"
+          new_msg = "let message = `La prenotazione ${res.code} è confermata. Classe assegnata: ${res.classeAssegnata || 'da definire'}.${res.exitMode === 'autonoma' ? ' Il PDF allegato contiene come seconda pagina l’autorizzazione all’uscita autonoma: stamparla, firmarla e consegnarla alla scuola.' : ''}`;"
+          if old_msg not in s:
+              raise SystemExit('Messaggio email non trovato')
+          s=s.replace(old_msg,new_msg,1)
+
+          old_extra = """      extra.push(`<div><span class=\"text-gray-400 font-medium\">Uscita:</span> <strong class=\"text-indigo-950\">${res.exitMode === 'autonoma' ? 'Autonoma - consegnare modulo firmato' : res.exitMode === 'ritiro_adulto' ? `Attesa adulto${res.pickupAdultName ? ` (${esc(res.pickupAdultName)})` : ''}` : 'Non indicata'}</strong></div>`);
+      if (!details.querySelector('[data-mini-extra]')) details.insertAdjacentHTML('beforeend', `<div data-mini-extra class=\"grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2\">${extra.join('')}</div>`);"""
+          new_extra = """      extra.push(`<div><span class=\"text-gray-400 font-medium\">Uscita:</span> <strong class=\"text-indigo-950\">${res.exitMode === 'autonoma' ? 'Autonoma - autorizzata online' : res.exitMode === 'ritiro_adulto' ? `Attesa adulto${res.pickupAdultName ? ` (${esc(res.pickupAdultName)})` : ''}` : 'Non indicata'}</strong></div>`);
+      if (res.parentGuardianName) extra.push(`<div><span class=\"text-gray-400 font-medium\">Genitore/tutore:</span> <strong class=\"text-indigo-950\">${esc(res.parentGuardianName)}${res.parentGuardianRole ? ` (${esc(res.parentGuardianRole)})` : ''}</strong></div>`);
+      if (res.exitMode === 'autonoma') {
+        extra.push(`<div><span class=\"text-gray-400 font-medium\">Autorizzazione online:</span> <strong class=\"text-green-700\">${res.declarationAccepted || res.exitAuthorizationAccepted ? 'Acquisita' : 'Non registrata'}</strong></div>`);
+        extra.push(`<div><span class=\"text-gray-400 font-medium\">Modulo firmato:</span> <strong class=\"${res.authorizationPaperReceived ? 'text-green-700' : 'text-orange-700'}\">${res.authorizationPaperReceived ? 'Ricevuto dalla scuola' : 'Da stampare, firmare e consegnare'}</strong></div>`);
+      }
+      if (!details.querySelector('[data-mini-extra]')) details.insertAdjacentHTML('beforeend', `<div data-mini-extra class=\"grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2\">${extra.join('')}</div>`);
+      if (res.exitMode === 'autonoma' && res.type !== WAITLIST && !details.querySelector('[data-mini-auth-download]')) details.insertAdjacentHTML('afterend', `<div data-mini-auth-download class=\"mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2\"><span><strong>Uscita autonoma:</strong> il PDF della prenotazione contiene la seconda pagina da firmare.</span><button type=\"button\" onclick=\"window.downloadMiniStageBookingPdf('${esc(res.code)}')\" class=\"bg-orange-600 text-white font-bold px-3 py-2 rounded-lg text-[10px]\">Scarica PDF + autorizzazione</button></div>`);"""
+          if old_extra not in s:
+              raise SystemExit('Dettagli ricevuta non trovati')
+          s=s.replace(old_extra,new_extra,1)
+
+          marker = """  async function promoteNext(slot) {"""
+          insert = """  async function downloadMiniStageBookingPdf(code) {
+    try {
+      const fresh = bookings.find(b => b.code === code) || (await snapshotCollection(bookingPath())).find(b => b.code === code);
+      if (!fresh) return window.showMessage?.('Prenotazione non trovata.', true);
+      const pdf = fresh.type === WAITLIST ? await createReservePdf(fresh, await queuePosition(fresh)) : await createConfirmedPdf(fresh, true);
+      const safe = String(fresh.nome || 'studente').replace(/[^a-z0-9_-]+/gi, '_');
+      pdf.save(`MiniStage_${fresh.code}_${safe}.pdf`);
+    } catch (e) {
+      console.error('MiniStage download PDF', e);
+      window.showMessage?.('Impossibile generare il PDF della prenotazione.', true);
+    }
+  }
+
+"""
+          if marker not in s:
+              raise SystemExit('Punto inserimento download non trovato')
+          s=s.replace(marker,insert+marker,1)
+
+          s=s.replace("    window.downloadWaitlistPdf=downloadWaitlistPdf;\n    window.editMiniStageSlot=editMiniStageSlot;",
+                      "    window.downloadWaitlistPdf=downloadWaitlistPdf;\n    window.downloadMiniStageBookingPdf=downloadMiniStageBookingPdf;\n    window.editMiniStageSlot=editMiniStageSlot;",1)
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('ministage-admin-console-v2.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const VERSION = '2026.09-admin-console-v2';", "const VERSION = '2026.09-admin-console-exit-auth-v2';")
+
+          old_active = '''<div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-indigo-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.type === CHECKED ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}">${esc(statusLabel(b))}</span></div><p class="text-[10px] text-gray-500 font-mono">${esc(b.code)} · ${esc(b.indirizzo)}</p><p class="text-[10px] text-gray-500">${esc(slotLabel(b))} · ${esc(b.email || '')}</p></div>
+        <div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Ricevuta</button>${b.type === ACTIVE ? `<button type="button" onclick="window.miniAdminCheckIn('${esc(b.code)}')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna presente</button>` : ''}</div>'''
+          new_active = '''<div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-indigo-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.type === CHECKED ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}">${esc(statusLabel(b))}</span>${b.exitMode === 'autonoma' ? `<span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">Uscita autonoma</span>` : ''}</div><p class="text-[10px] text-gray-500 font-mono">${esc(b.code)} · ${esc(b.indirizzo)}</p><p class="text-[10px] text-gray-500">${esc(slotLabel(b))} · ${esc(b.email || '')}</p>${b.exitMode === 'autonoma' ? `<p class="text-[10px] mt-1"><span class="text-green-700 font-bold">Autorizzazione online acquisita</span> · <span class="${b.authorizationPaperReceived ? 'text-green-700' : 'text-orange-700'} font-bold">${b.authorizationPaperReceived ? 'Modulo firmato ricevuto' : 'Modulo firmato da consegnare'}</span>${b.parentGuardianName ? ` · Genitore/tutore: ${esc(b.parentGuardianName)}${b.parentGuardianRole ? ` (${esc(b.parentGuardianRole)})` : ''}` : ''}</p>` : b.exitMode === 'ritiro_adulto' ? `<p class="text-[10px] mt-1 text-gray-600">Ritiro adulto: ${esc(b.pickupAdultName || 'da verificare')}</p>` : ''}</div>
+        <div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Dettaglio prenotazione</button>${b.exitMode === 'autonoma' ? `<button type="button" onclick="window.downloadMiniStageBookingPdf?.('${esc(b.code)}')" class="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">PDF + autorizzazione</button>` : ''}${b.type === ACTIVE ? `<button type="button" onclick="window.miniAdminCheckIn('${esc(b.code)}')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna presente</button>` : ''}</div>'''
+          if old_active not in s:
+              raise SystemExit('Riga iscritti non trovata')
+          s=s.replace(old_active,new_active,1)
+
+          pattern = re.compile(r"  function renderAuth\(\) \{.*?\n  \}\n\n  function renderScannerSessions", re.S)
+          replacement = '''  function renderAuth() {
+    const root = document.getElementById('mini-v2-auth-list');
+    if (!root) return;
+    const docs = state.bookings
+      .filter(b => b.type !== CANCELLED && b.exitMode === 'autonoma' && (b.declarationAccepted || b.exitAuthorizationAccepted))
+      .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    root.innerHTML = docs.map(b => `<div class="p-3 rounded-xl border ${b.authorizationPaperReceived ? 'border-green-100 bg-green-50/30' : 'border-orange-100 bg-white'} flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"><div><div class="flex flex-wrap gap-2 items-center"><strong class="text-xs text-orange-950">${esc(b.nome)}</strong><span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-800">Autorizzazione online acquisita</span><span class="text-[9px] font-black px-2 py-0.5 rounded-full ${b.authorizationPaperReceived ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}">${b.authorizationPaperReceived ? 'Modulo firmato ricevuto' : 'Modulo da consegnare'}</span></div><p class="text-[10px] text-gray-500 font-mono mt-1">${esc(b.code)} · ${esc(b.indirizzo)} · ${esc(slotLabel(b))}</p><p class="text-[10px] text-gray-600">Genitore/tutore: <strong>${esc(b.parentGuardianName || 'non indicato')}</strong>${b.parentGuardianRole ? ` (${esc(b.parentGuardianRole)})` : ''}</p></div><div class="flex flex-wrap gap-2"><button type="button" onclick="window.miniAdminOpenReceipt('${esc(b.code)}')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">Dettaglio</button><button type="button" onclick="window.downloadMiniStageBookingPdf?.('${esc(b.code)}')" class="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-bold">PDF + autorizzazione</button>${!b.authorizationPaperReceived ? `<button type="button" onclick="window.markAuthorizationPaperReceived?.('${esc(b.code)}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Segna modulo ricevuto</button>` : ''}</div></div>`).join('') || '<p class="text-xs text-gray-400 italic">Nessuna autorizzazione di uscita autonoma registrata.</p>';
+  }
+
+  function renderScannerSessions'''
+          s2,n=pattern.subn(replacement,s,count=1)
+          if n!=1:
+              raise SystemExit('renderAuth non sostituito')
+          s=s2
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('ministage-complete.js?v=20260906b','ministage-complete.js?v=20260906c')
+          s=s.replace('ministage-admin-console-v2.js?v=20260906b','ministage-admin-console-v2.js?v=20260906c')
+          p.write_text(s,encoding='utf-8')
+          PY
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          python3 - <<'PY'
+          from pathlib import Path
+          a=Path('ministage-complete.js').read_text(encoding='utf-8')
+          b=Path('ministage-admin-console-v2.js').read_text(encoding='utf-8')
+          h=Path('index.html').read_text(encoding='utf-8')
+          for x in ['Autorizzo espressamente mio/a figlio/a','seconda pagina del PDF ricevuto via e-mail','exitAuthorizationAccepted','authorizationPaperRequired','AUTORIZZA il/la proprio/a figlio/a','downloadMiniStageBookingPdf']:
+              assert x in a, x
+          for x in ['Autorizzazione online acquisita','Modulo firmato da consegnare','PDF + autorizzazione','Genitore/tutore']:
+              assert x in b, x
+          assert '20260906c' in h
+          print('STATIC_EXIT_AUTH_V2_OK')
+          PY
+      - name: Browser verification without creating bookings
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/http.log 2>&1 &
+          sleep 2
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const assert=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1400,height:1000}});
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8000/?verify=exit-auth-v2',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.__MINISTAGE_COMPLETE__?.uiReady && window.__MINISTAGE_ADMIN_CONSOLE_V2__?.version,{timeout:25000});
+            const result=await page.evaluate(()=>{
+              const mode=document.getElementById('mini-exit-mode');
+              mode.value='autonoma'; mode.dispatchEvent(new Event('change',{bubbles:true}));
+              return {
+                authText:document.getElementById('mini-declaration-text')?.textContent||'',
+                notice:document.getElementById('mini-exit-notice')?.textContent||'',
+                noticeHidden:document.getElementById('mini-exit-notice')?.classList.contains('hidden'),
+                dl:typeof window.downloadMiniStageBookingPdf,
+                teacherText:document.getElementById('mini-admin-console-v2')?.textContent||''
+              };
+            });
+            console.log('EXIT_AUTH_V2_STATE',JSON.stringify(result));
+            assert(/Autorizzo espressamente/i.test(result.authText),'Spunta autorizzazione non esplicita');
+            assert(/seconda pagina/i.test(result.notice) && !result.noticeHidden,'Avviso seconda pagina non visibile');
+            assert(result.dl==='function','Download PDF docente non disponibile');
+            assert(/Autorizzazioni uscita autonoma/i.test(result.teacherText),'Sezione docente autorizzazioni mancante');
+            assert(errors.length===0,'Errori JS: '+errors.join(' | '));
+            console.log('EXIT_AUTH_V2_BROWSER_OK');
+            await browser.close();
+          })().catch(e=>{console.error('EXIT_AUTH_V2_BROWSER_FAIL',e);process.exit(1)});
+          NODE
+      - name: Commit changes and remove temporary workflow
+        run: |
+          rm -f .github/workflows/apply-exit-authorization-v2.yml
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js ministage-admin-console-v2.js .github/workflows/apply-exit-authorization-v2.yml
+          git commit -m "Rafforza autorizzazione uscita autonoma MiniStage"
+          git push
