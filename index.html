@@ -85,10 +85,17 @@
         }
 
         .full-screen-code {
-            font-size: 3.2rem;
-            letter-spacing: 0.15em;
+            font-size: 2rem;
+            letter-spacing: 0.08em;
             word-break: break-all;
+            overflow-wrap: anywhere;
             text-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+        }
+        @media (min-width: 640px) {
+            .full-screen-code {
+                font-size: 3.2rem;
+                letter-spacing: 0.15em;
+            }
         }
 
         /* Codice a Barre CSS simulato per l'interfaccia */
@@ -866,7 +873,7 @@
             const msgBox = document.getElementById('message-box');
             if (!msgBox) return;
             msgBox.textContent = msg;
-            msgBox.className = `fixed top-4 right-4 text-white p-4 rounded-xl shadow-2xl transition-all duration-300 z-50 transform translate-y-0`;
+            msgBox.className = `fixed top-4 left-4 right-4 sm:left-auto sm:max-w-md text-white p-4 rounded-xl shadow-2xl transition-all duration-300 z-[100] transform translate-y-0 break-words`;
             if (isError) {
                 msgBox.classList.add('bg-red-500');
             } else {
@@ -983,7 +990,7 @@
                 const container = document.getElementById(containerId);
                 if (!container) return;
 
-                const filteredSlots = stageSlots.filter(s => s.indirizzo === ind);
+                const filteredSlots = stageSlots.filter(s => s.indirizzo === ind && s.active !== false);
                 if (filteredSlots.length === 0) {
                     container.innerHTML = `
                         <div class="flex flex-col items-center justify-center h-full text-center py-6">
@@ -1015,7 +1022,7 @@
                     const isFull = remaining <= 0;
                     const actionButton = isFull 
                         ? `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed text-center">Completo</span>`
-                        : `<button onclick="window.openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition shadow-md font-sans">Prenota</button>`;
+                        : `<button onclick="window.openBookingModal('${slot.id}', '${slot.indirizzo.replace(/'/g, "\\'")}', '${slot.day}', '${slot.dateStr}', '${slot.time}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2.5 min-h-[44px] rounded-xl transition shadow-md font-sans">Prenota</button>`;
 
                     return `
                         <div class="p-3 bg-white border ${rowBorderColor} rounded-xl shadow-sm flex flex-col justify-between space-y-2">
@@ -1035,7 +1042,7 @@
                                 <div class="${progressColor} h-full transition-all duration-500" style="width: ${percentUsed}%"></div>
                             </div>
                             <div class="flex justify-between items-center pt-1">
-                                <span class="text-[9px] text-indigo-400 font-extrabold tracking-wider uppercase">Ingresso Libero</span>
+                                <span class="text-[9px] text-indigo-400 font-extrabold tracking-wider uppercase">Prenotazione richiesta</span>
                                 ${actionButton}
                             </div>
                         </div>
@@ -1509,6 +1516,11 @@
         window.checkInStudent = async function(code) {
             const idx = allBookings.findIndex(b => b.code === code);
             if (idx === -1) return window.showMessage("Iscrizione non trovata.", true);
+            const currentBooking = allBookings[idx];
+            if (currentBooking.type === 'lista_attesa') return window.showMessage("Lo studente è ancora in lista d’attesa e non può essere registrato come presente.", true);
+            if (currentBooking.type === 'cancellazione') return window.showMessage("La prenotazione è annullata e non può essere registrata come presente.", true);
+            if (currentBooking.type === 'entrato') return window.showMessage("Lo studente risulta già presente.", true);
+            if (currentBooking.type !== 'prenotazione') return window.showMessage("Stato della prenotazione non valido per il check-in.", true);
 
             try {
                 const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_PRENOTAZIONI}`, code);
@@ -1611,6 +1623,10 @@
 
             if (booking.type === 'cancellazione') {
                 window.showScannerFeedback(`La prenotazione per ${booking.nome} risulta precedentemente annullata.`, true);
+                return;
+            }
+            if (booking.type === 'lista_attesa') {
+                window.showScannerFeedback(`${booking.nome} è ancora in lista d’attesa e non è ammesso al MiniStage.`, true);
                 return;
             }
 
@@ -1988,7 +2004,11 @@
             if (inputCode) {
                 booking = allBookings.find(b => b.code === inputCode);
             } else if (inputName && inputEmail) {
-                booking = allBookings.find(b => b.nome.toLowerCase().includes(inputName) && b.email.toLowerCase() === inputEmail);
+                const matches = allBookings.filter(b => b.nome.toLowerCase().includes(inputName) && b.email.toLowerCase() === inputEmail);
+                if (matches.length > 1) {
+                    return window.showMessage("Sono state trovate più prenotazioni con questi dati. Per evitare di annullare o recuperare quella sbagliata, usa il codice MS della prenotazione interessata.", true);
+                }
+                booking = matches[0] || null;
             }
 
             if (!booking) {
@@ -2015,6 +2035,9 @@
                 }
             } else {
                 window.setView('receipt', { code: booking.code, type: booking.type, data: booking });
+                if (booking.type === 'cancellazione') {
+                    return window.showMessage("Questa prenotazione è annullata: viene mostrato lo stato, ma non viene rigenerato alcun pass valido.", true);
+                }
                 window.sendAutomaticEmailNotification(booking, true);
             }
         };
@@ -2040,7 +2063,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906f"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906f"></script>
+    <script src="ministage-complete.js?v=20260906g"></script>
+    <script src="ministage-admin-console-v2.js?v=20260906g"></script>
 </body>
 </html>

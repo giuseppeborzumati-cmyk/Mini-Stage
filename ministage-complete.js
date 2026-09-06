@@ -241,6 +241,10 @@
   function validateForm(d) {
     if (!d.slotId || !d.indirizzo || !d.nome || !d.scuola || !d.email || !d.cellulare) return 'Tutti i campi principali sono obbligatori.';
     if (!/^\S+@\S+\.\S+$/.test(d.email)) return 'Inserisci un indirizzo e-mail valido.';
+    const phoneDigits = String(d.cellulare).replace(/\D/g, '');
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) return 'Inserisci un numero di cellulare valido.';
+    if (d.nome.length < 3) return 'Inserisci nome e cognome dello studente.';
+    if (d.parentGuardianName && d.parentGuardianName.length < 3) return 'Inserisci nome e cognome del genitore/tutore.';
     if (!d.exitMode || !d.parentGuardianName || !d.parentGuardianRole) return 'Completa la sezione relativa all’uscita.';
     if (!d.declarationAccepted) return d.exitMode === 'autonoma' ? 'Per proseguire devi spuntare l’autorizzazione esplicita all’uscita autonoma.' : 'Per proseguire devi confermare la modalità di uscita selezionata.';
     if (d.exitMode === 'ritiro_adulto' && !d.pickupAdultName) return 'Indica il nome dell’adulto incaricato del ritiro.';
@@ -261,6 +265,7 @@
       if (duplicateExists(d, fresh)) throw new Error('DUPLICATE');
       const slot = slots.find(s => s.id === d.slotId) || (await snapshotCollection(slotPath())).find(s => s.id === d.slotId);
       if (!slot) throw new Error('SLOT_NOT_FOUND');
+      if (slot.active === false) throw new Error('SLOT_INACTIVE');
       const freshCaps = await snapshotCollection(capPath());
       const capMap = {};
       freshCaps.forEach(x => { if (x.indirizzo) capMap[x.indirizzo] = Number(x.postiMax || DEFAULT_CAPACITY); });
@@ -334,6 +339,7 @@
       if (e.message === 'DUPLICATE') window.showMessage?.('Risulta già una richiesta attiva con lo stesso nome ed e-mail per questo MiniStage.', true);
       else if (e.message === 'SLOT_BUSY') window.showMessage?.('Lo slot è in aggiornamento. Riprova tra pochi secondi.', true);
       else if (e.message === 'SLOT_NOT_FOUND') window.showMessage?.('Lo slot non è più disponibile.', true);
+      else if (e.message === 'SLOT_INACTIVE') window.showMessage?.('Questo MiniStage è stato disattivato e non accetta più prenotazioni.', true);
       else window.showMessage?.('Impossibile completare il salvataggio. Riprova.', true);
     } finally {
       if (button) {
@@ -546,6 +552,10 @@
   }
 
   async function sendAutomatic(res, isRetrieval = false) {
+    if (res?.type === CANCELLED) {
+      window.showMessage?.('Prenotazione annullata: nessun pass valido viene rigenerato o inviato.', true);
+      return;
+    }
     const statusBg = document.getElementById('email-sending-status');
     const statusText = document.getElementById('email-status-text');
     if (statusBg) statusBg.classList.remove('hidden');
@@ -608,6 +618,7 @@
     try {
       const fresh = bookings.find(b => b.code === code) || (await snapshotCollection(bookingPath())).find(b => b.code === code);
       if (!fresh) return window.showMessage?.('Prenotazione non trovata.', true);
+      if (fresh.type === CANCELLED) return window.showMessage?.('Prenotazione annullata: non esiste un pass valido da scaricare.', true);
       const pdf = fresh.type === WAITLIST ? await createReservePdf(fresh, await queuePosition(fresh)) : await createConfirmedPdf(fresh, true);
       const safe = String(fresh.nome || 'studente').replace(/[^a-z0-9_-]+/gi, '_');
       pdf.save(`MiniStage_${fresh.code}_${safe}.pdf`);
