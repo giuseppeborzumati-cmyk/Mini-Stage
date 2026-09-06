@@ -1,0 +1,29 @@
+name: Exit authorization v2
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/exit-auth-v2.yml"
+      - "tools/apply_exit_auth_v2.py"
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python3 tools/apply_exit_auth_v2.py
+      - name: Check JavaScript
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+      - name: Commit final files
+        run: |
+          rm -f tools/apply_exit_auth_v2.py .github/workflows/exit-auth-v2.yml
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js ministage-admin-console-v2.js tools/apply_exit_auth_v2.py .github/workflows/exit-auth-v2.yml
+          git commit -m "Rafforza autorizzazione uscita autonoma MiniStage"
+          git push
