@@ -1,0 +1,44 @@
+name: Audit docente one page v6
+on:
+  push:
+    paths:
+      - 'tools/audit-admin-onepage-v6.mjs'
+      - '.github/workflows/audit-admin-onepage-v6.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release source
+        run: |
+          node --check ministage-admin-console-v2.js
+          grep -F "2026.09-docente-onepage-v4" ministage-admin-console-v2.js
+          grep -F "v=20260906k" index.html
+      - name: Wait for published one page
+        run: |
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsSL "https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?v=onepage-v6-${i}-$(date +%s)" | grep -q "v=20260906k"; then ok=1; break; fi
+            sleep 5
+          done
+          test "$ok" = "1"
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Browser audit one page
+        run: node tools/audit-admin-onepage-v6.mjs
+      - name: Cleanup temporary audit
+        if: always()
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git pull --rebase || true
+          git rm -f tools/audit-admin-onepage-v6.mjs .github/workflows/audit-admin-onepage-v6.yml || true
+          git commit -m "Rimuove collaudo temporaneo dashboard docente v6" || true
+          git push || true
