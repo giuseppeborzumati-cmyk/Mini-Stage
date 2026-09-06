@@ -1,0 +1,166 @@
+name: Mobile full check
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/mobile-full-check.yml'
+permissions:
+  contents: read
+jobs:
+  mobile-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright core
+        run: npm install --no-save playwright-core@1.55.0
+      - name: Locate Chrome
+        shell: bash
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME_BIN" ]; then
+            echo 'Chrome/Chromium not found' >&2
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: Run mobile interaction checks
+        env:
+          TARGET: https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?v=60d23aa
+        run: |
+          cat > /tmp/mobile-check.cjs <<'EOF'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+          const html = fs.readFileSync('index.html','utf8');
+          const passMatch = html.match(/const\s+ADMIN_PASSWORD\s*=\s*['\"]([^'\"]+)['\"]/);
+          if (!passMatch) throw new Error('ADMIN password not found in local source');
+          const adminPassword = passMatch[1];
+          const target = process.env.TARGET;
+          const chrome = process.env.CHROME_BIN;
+          const results = [];
+
+          async function waitVisible(page, selector, timeout=20000) {
+            await page.waitForFunction(sel => {
+              const el = document.querySelector(sel);
+              return !!el && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none';
+            }, selector, { timeout });
+          }
+
+          async function bodyFits(page, label) {
+            const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
+            assert(m.sw <= m.iw + 3, `${label}: horizontal page overflow ${m.sw} > ${m.iw}`);
+          }
+
+          async function testDevice(browser, name, width, height) {
+            const context = await browser.newContext({
+              viewport: { width, height },
+              isMobile: true,
+              hasTouch: true,
+              userAgent: `Mozilla/5.0 (Linux; Android 16; ${name}) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36`
+            });
+            const page = await context.newPage();
+            const pageErrors = [];
+            page.on('pageerror', e => pageErrors.push(String(e.message || e)));
+            await page.goto(`${target}&mobilecheck=${Date.now()}-${width}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await waitVisible(page, '#view-home');
+            await page.waitForTimeout(2000);
+            await bodyFits(page, `${name} home`);
+
+            const cards = page.locator('#view-home button').filter({ hasText: /Prenota|Lista d'attesa/i });
+            assert(await cards.count() > 0, `${name}: no book/waitlist action found`);
+            await cards.first().click();
+            await waitVisible(page, '#booking-modal');
+            await page.waitForSelector('#mini-exit-mode', { timeout: 10000 });
+
+            const modalInfo = await page.locator('#booking-modal > div').evaluate(el => ({
+              clientHeight: el.clientHeight, scrollHeight: el.scrollHeight, width: el.getBoundingClientRect().width,
+              top: el.getBoundingClientRect().top, bottom: el.getBoundingClientRect().bottom,
+              overflowY: getComputedStyle(el).overflowY
+            }));
+            assert(modalInfo.width <= width + 1, `${name}: booking modal wider than viewport`);
+            assert(modalInfo.bottom <= height + 2 && modalInfo.top >= -2, `${name}: booking modal outside viewport`);
+            assert(['auto','scroll'].includes(modalInfo.overflowY), `${name}: booking modal not vertically scrollable`);
+
+            await page.fill('#modal-nome', 'Test Mobile Non Inviato');
+            await page.fill('#modal-scuola', 'Scuola Test');
+            await page.fill('#modal-email', 'noreply-mobile-test@example.com');
+            await page.fill('#modal-cellulare', '0000000000');
+            await page.selectOption('#mini-exit-mode', 'autonoma');
+            await page.fill('#mini-parent-name', 'Genitore Test');
+            await page.fill('#mini-parent-role', 'genitore');
+            await page.check('#mini-declaration');
+            assert(await page.locator('#mini-exit-notice').isVisible(), `${name}: autonomous-exit notice not visible`);
+            const declarationText = await page.locator('#mini-declaration-text').innerText();
+            assert(/Autorizzo espressamente/i.test(declarationText), `${name}: authorization declaration missing`);
+
+            await page.setViewportSize({ width, height: Math.min(500, height) });
+            const panel = page.locator('#booking-modal > div');
+            await panel.evaluate(el => { el.scrollTop = el.scrollHeight; });
+            await page.locator('#booking-modal button').filter({ hasText: /Conferma Iscrizione|Inserisci in Lista d'attesa/i }).scrollIntoViewIfNeeded();
+            const confirmBox = await page.locator('#booking-modal button').filter({ hasText: /Conferma Iscrizione|Inserisci in Lista d'attesa/i }).boundingBox();
+            assert(confirmBox && confirmBox.y >= 0 && confirmBox.y + confirmBox.height <= Math.min(500,height) + 3, `${name}: confirm button unreachable with reduced mobile height`);
+            const scrollMetrics = await panel.evaluate(el => ({ top: el.scrollTop, sh: el.scrollHeight, ch: el.clientHeight }));
+            if (scrollMetrics.sh > scrollMetrics.ch + 2) assert(scrollMetrics.top > 0, `${name}: booking panel cannot scroll`);
+            await page.locator('#booking-modal button').filter({ hasText: 'Annulla' }).click();
+            assert(await page.locator('#booking-modal').evaluate(el => el.classList.contains('hidden')), `${name}: booking modal did not close`);
+
+            await page.setViewportSize({ width, height });
+            await page.getByRole('button', { name: 'Recupera Prenotazione' }).click();
+            await waitVisible(page, '#manage-booking-modal');
+            await page.setViewportSize({ width, height: Math.min(500,height) });
+            const managePanel = page.locator('#manage-booking-modal > div');
+            await managePanel.evaluate(el => { el.scrollTop = el.scrollHeight; });
+            const manageSubmit = page.locator('#btn-submit-action');
+            await manageSubmit.scrollIntoViewIfNeeded();
+            const manageBox = await manageSubmit.boundingBox();
+            assert(manageBox && manageBox.y + manageBox.height <= Math.min(500,height) + 3, `${name}: retrieve submit unreachable`);
+            await page.getByRole('button', { name: 'Chiudi' }).click();
+
+            await page.setViewportSize({ width, height });
+            await page.getByRole('button', { name: /Accesso Commissione Orientamento/i }).click();
+            await waitVisible(page, '#view-admin');
+            await page.fill('#admin-password', adminPassword);
+            await page.getByRole('button', { name: 'Entra nella Dashboard' }).click();
+            await waitVisible(page, '#admin-dashboard');
+            await page.waitForSelector('#mini-admin-console-v2', { timeout: 10000 });
+            await bodyFits(page, `${name} admin overview`);
+
+            const tabs = [
+              ['overview','Panoramica'], ['iscritti','Iscritti'], ['attesa','Lista d’attesa'],
+              ['calendario','Calendario'], ['scanner','Scanner Accoglienza'], ['documenti','Documenti'], ['strumenti','Altri strumenti']
+            ];
+            for (const [id,label] of tabs) {
+              await page.locator(`[data-mini-tab="${id}"]`).click();
+              await page.waitForTimeout(150);
+              const panelVisible = await page.locator(`[data-mini-panel="${id}"]`).isVisible().catch(()=> id === 'strumenti');
+              if (id !== 'strumenti') assert(panelVisible, `${name}: admin tab ${label} did not open`);
+              await bodyFits(page, `${name} admin ${label}`);
+            }
+
+            await page.locator('[data-mini-tab="scanner"]').click();
+            assert(await page.getByRole('button', { name: /Genera QR per collegare i telefoni/i }).isVisible(), `${name}: scanner QR button not visible`);
+            assert(await page.locator('#mini-v2-manual-code').isVisible(), `${name}: scanner manual input not visible`);
+            await page.locator('[data-mini-tab="calendario"]').click();
+            assert(await page.locator('#mini-v2-calendar-rows').isVisible(), `${name}: calendar table not visible`);
+            const calendarWrapScroll = await page.locator('[data-mini-panel="calendario"] .overflow-x-auto').first().evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth, ox: getComputedStyle(el).overflowX }));
+            assert(calendarWrapScroll.ox === 'auto' || calendarWrapScroll.ox === 'scroll', `${name}: calendar lacks horizontal internal scrolling`);
+            await page.locator('[data-mini-tab="documenti"]').click();
+            assert(await page.locator('#mini-v2-classes').isVisible(), `${name}: documents/classes area not visible`);
+
+            assert(pageErrors.length === 0, `${name}: page errors: ${pageErrors.join(' | ')}`);
+            results.push({ device:name, viewport:`${width}x${height}`, status:'OK' });
+            await context.close();
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+            try {
+              await testDevice(browser, 'Android-small', 360, 640);
+              await testDevice(browser, 'Android-large', 412, 915);
+              console.log('MOBILE_FULL_CHECK_OK ' + JSON.stringify(results));
+            } finally {
+              await browser.close();
+            }
+          })().catch(e => { console.error('MOBILE_FULL_CHECK_FAILED', e.stack || e); process.exit(1); });
+          EOF
+          node /tmp/mobile-check.cjs
