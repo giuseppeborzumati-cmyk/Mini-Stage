@@ -1,0 +1,39 @@
+name: Final local hardening MiniStage
+on:
+  push:
+    paths:
+      - 'tools/final_local_hardening_v1.py'
+      - '.github/workflows/final-local-hardening-v1.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply local hardening
+        run: python tools/final_local_hardening_v1.py
+      - name: Syntax and guards
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          grep -F "final-hardening-v5" ministage-complete.js
+          grep -F "admin-final-hardening-v3" ministage-admin-console-v2.js
+          grep -F "0362 224164" index.html
+          grep -F "hidden mb-4 bg-indigo-100" index.html
+          grep -F "typeof window.Chart === 'undefined'" index.html
+          grep -F "Data e orario non modificati" ministage-admin-console-v2.js
+          grep -F "Impossibile eliminare lo slot" ministage-admin-console-v2.js
+          grep -F "v=20260906i" index.html
+          echo FINAL_LOCAL_HARDENING_CHECK_OK
+      - name: Commit and cleanup
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js ministage-admin-console-v2.js
+          git commit -m "Completa hardening logico e visivo MiniStage"
+          git rm tools/final_local_hardening_v1.py .github/workflows/final-local-hardening-v1.yml
+          git commit -m "Rimuove strumenti temporanei hardening finale"
+          git push
