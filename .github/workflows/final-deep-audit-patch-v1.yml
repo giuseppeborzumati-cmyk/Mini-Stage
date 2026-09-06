@@ -1,0 +1,39 @@
+name: Final deep audit patch MiniStage
+on:
+  push:
+    paths:
+      - 'tools/final_deep_audit_patch_v1.py'
+      - '.github/workflows/final-deep-audit-patch-v1.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python tools/final_deep_audit_patch_v1.py
+      - name: JavaScript syntax
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+      - name: Verify guards
+        run: |
+          grep -F "final-deep-audit-v4" ministage-complete.js
+          grep -F "data.type === CANCELLED" ministage-complete.js
+          grep -F "b.type!==ACTIVE" ministage-complete.js
+          grep -F "mini-exit-notice')?.classList.add('hidden')" ministage-complete.js
+          grep -F "Informativa Privacy ufficiale dell’Istituto" index.html
+          grep -F "v=20260906h" index.html
+          echo FINAL_DEEP_AUDIT_GUARDS_OK
+      - name: Commit final files and cleanup
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js
+          git commit -m "Corregge casi limite e privacy emersi dall audit finale"
+          git rm tools/final_deep_audit_patch_v1.py .github/workflows/final-deep-audit-patch-v1.yml
+          git commit -m "Rimuove strumenti temporanei audit finale"
+          git push
