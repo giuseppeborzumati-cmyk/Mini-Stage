@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-admin-console-exit-auth-v2';
+  const VERSION = '2026.09-admin-final-hardening-v3';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -371,6 +371,11 @@
     for (const input of inputs) {
       const indirizzo = input.dataset.miniCapAddress;
       const postiMax = Math.max(1, parseInt(input.value, 10) || 25);
+      const maxOccupied = Math.max(0, ...state.slots.filter(s => s.indirizzo === indirizzo).map(s => state.bookings.filter(b => b.slotId === s.id && (b.type === ACTIVE || b.type === CHECKED)).length));
+      if (postiMax < maxOccupied) {
+        input.value = String(Math.max(maxOccupied, Number(state.caps[indirizzo] || 25)));
+        return showMessage(`Capienza non salvata per ${indirizzo}: ci sono già ${maxOccupied} posti occupati in uno degli slot.`, true);
+      }
       await f.setDoc(f.doc(core.db, `${capsPath()}/${indirizzo}`), { indirizzo, postiMax, updatedAt: Date.now() }, { merge: true });
     }
     showMessage('Capienze salvate su Firebase.');
@@ -385,11 +390,29 @@
     const postiMax = Math.max(1, parseInt(row.querySelector('[data-field="cap"]')?.value, 10) || 25);
     const active = !!row.querySelector('[data-field="active"]')?.checked;
     if (!isoDate || !time) return showMessage('Inserisci data e orario.', true);
+    const liveBookings = state.bookings.filter(b => b.slotId === id && b.type !== CANCELLED);
+    const scheduleChanged = isoDate !== slotIso(slot) || time !== String(slot.time || '');
+    if (liveBookings.length && scheduleChanged) {
+      renderCalendar();
+      return showMessage(`Data e orario non modificati: questo MiniStage ha già ${liveBookings.length} prenotazioni/richieste. Crea un nuovo slot o gestisci prima gli iscritti.`, true);
+    }
+    const occupied = liveBookings.filter(b => b.type === ACTIVE || b.type === CHECKED).length;
+    if (postiMax < occupied) {
+      renderCalendar();
+      return showMessage(`Capienza non modificata: ci sono già ${occupied} posti occupati.`, true);
+    }
+    const duplicate = state.slots.some(s => s.id !== id && s.indirizzo === slot.indirizzo && slotIso(s) === isoDate && String(s.time || '') === time);
+    if (duplicate) {
+      renderCalendar();
+      return showMessage('Esiste già un MiniStage dello stesso percorso con la stessa data e lo stesso orario.', true);
+    }
     await f.setDoc(f.doc(core.db, `${slotsPath()}/${id}`), { id, indirizzo: slot.indirizzo, isoDate, dateStr: formatDateIt(isoDate), day: weekdayIt(isoDate), time, postiMax, active, updatedAt: Date.now() }, { merge: true });
     showMessage('MiniStage aggiornato su Firebase.');
   }
 
   async function deleteSlot(id) {
+    const liveBookings = state.bookings.filter(b => b.slotId === id && b.type !== CANCELLED);
+    if (liveBookings.length) return showMessage(`Impossibile eliminare lo slot: sono presenti ${liveBookings.length} prenotazioni/richieste collegate. Puoi disattivarlo senza cancellarlo.`, true);
     if (!confirm('Eliminare questo MiniStage dal calendario?')) return;
     await f.deleteDoc(f.doc(core.db, `${slotsPath()}/${id}`));
     showMessage('MiniStage eliminato dal calendario.');
@@ -401,6 +424,7 @@
     const time = document.getElementById('mini-v2-new-time')?.value.trim() || '';
     const postiMax = Math.max(1, parseInt(document.getElementById('mini-v2-new-cap')?.value, 10) || 25);
     if (!indirizzo || !isoDate || !time) return showMessage('Seleziona indirizzo, data e orario.', true);
+    if (state.slots.some(s => s.indirizzo === indirizzo && slotIso(s) === isoDate && String(s.time || '') === time)) return showMessage('Esiste già un MiniStage dello stesso percorso con la stessa data e lo stesso orario.', true);
     const id = `SLOT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     await f.setDoc(f.doc(core.db, `${slotsPath()}/${id}`), { id, indirizzo, isoDate, dateStr: formatDateIt(isoDate), day: weekdayIt(isoDate), time, postiMax, active: true, createdAt: Date.now(), updatedAt: Date.now() });
     document.getElementById('mini-v2-new-date').value = '';
@@ -412,6 +436,12 @@
     for (const input of inputs) {
       const indirizzo = input.dataset.miniClassAddress;
       const classe = input.value.trim();
+      const previous = String(state.classes[indirizzo] || '');
+      const liveBookings = state.bookings.filter(b => b.indirizzo === indirizzo && b.type !== CANCELLED);
+      if (liveBookings.length && classe !== previous) {
+        input.value = previous;
+        return showMessage(`Classe non modificata per ${indirizzo}: esistono già ${liveBookings.length} prenotazioni/richieste collegate.`, true);
+      }
       await f.setDoc(f.doc(core.db, `${classesPath()}/${indirizzo}`), { indirizzo, classe, updatedAt: Date.now() }, { merge: true });
     }
     showMessage('Classi assegnate salvate.');

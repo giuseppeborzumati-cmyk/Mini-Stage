@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-final-deep-audit-v4';
+  const VERSION = '2026.09-final-hardening-v5';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -600,6 +600,7 @@
     if (data.type === CANCELLED) {
       if (title) title.textContent = 'ISCRIZIONE ANNULLATA';
       if (msg) msg.innerHTML = '<span class="text-red-600 font-extrabold text-sm">Questa prenotazione è stata annullata.</span>';
+      if (notice) notice.textContent = 'PRENOTAZIONE ANNULLATA: questo codice non è valido per l’accesso al MiniStage.';
       document.querySelector('[data-mini-auth-download]')?.remove();
     } else if (res.type === WAITLIST || data.type === WAITLIST) {
       if (title) title.textContent = 'ISCRIZIONE CON RISERVA';
