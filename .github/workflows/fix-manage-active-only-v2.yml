@@ -1,0 +1,38 @@
+name: Fix manage booking active only
+
+on:
+  push:
+    paths:
+      - 'tools/fix_manage_active_only_v2.py'
+      - '.github/workflows/fix-manage-active-only-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python tools/fix_manage_active_only_v2.py
+      - name: Check inline JavaScript
+        run: |
+          python -c "from pathlib import Path; import re; s=Path('index.html').read_text(encoding='utf-8'); Path('/tmp/index-inline.js').write_text('\\n'.join(re.findall(r'<script type=\"module\">(.*?)</script>', s, re.S)), encoding='utf-8')"
+          node --check /tmp/index-inline.js
+      - name: Verify behavior
+        run: |
+          grep -q "window.isManageableBooking" index.html
+          grep -q "booking.type === 'prenotazione' || booking.type === 'lista_attesa'" index.html
+          grep -q "allBookings.find(b => b.code === inputCode && window.isManageableBooking(b))" index.html
+          grep -q "if (!window.isManageableBooking(b)) return false" index.html
+          grep -q "if (!window.isManageableBooking(booking))" index.html
+          if grep -q "Questa prenotazione è annullata: viene mostrato lo stato" index.html; then exit 1; fi
+      - name: Publish
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html
+          git rm tools/fix_manage_active_only_v2.py .github/workflows/fix-manage-active-only-v2.yml .github/workflows/fix-manage-active-only.yml
+          git commit -m "Limita recupero e cancellazione alle prenotazioni valide"
+          git push
