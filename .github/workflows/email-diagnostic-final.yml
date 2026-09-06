@@ -1,0 +1,102 @@
+name: Diagnostica email MiniStage
+on:
+  push:
+    paths:
+      - '.github/workflows/email-diagnostic-final.yml'
+permissions:
+  contents: write
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify source syntax
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+      - name: Probe Apps Script deployments without sending valid mail
+        run: |
+          set +e
+          echo '--- CONFIRMATION ENDPOINT GET ---'
+          curl -sS -L -D /tmp/h1 -o /tmp/b1 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec'
+          tail -n 20 /tmp/h1 || true
+          head -c 1200 /tmp/b1 || true
+          echo
+          echo '--- CONFIRMATION ENDPOINT INVALID POST ---'
+          curl -sS -L -D /tmp/h2 -o /tmp/b2 -H 'Content-Type: text/plain;charset=utf-8' --data '{"email":"","nome":"TEST","cognome":"DIAGNOSTICA","codice_prenotazione":"MS-000000","pdfBase64":""}' 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec'
+          tail -n 20 /tmp/h2 || true
+          head -c 2000 /tmp/b2 || true
+          echo
+          echo '--- CANCELLATION ENDPOINT INVALID POST ---'
+          curl -sS -L -D /tmp/h3 -o /tmp/b3 -H 'Content-Type: text/plain;charset=utf-8' --data '{"email":"","nome":"TEST","cognome":"DIAGNOSTICA","codice_prenotazione":"MS-000000"}' 'https://script.google.com/macros/s/AKfwcbw1C_uoalaFlcidMvhqz9zMxSXwqj1nVMo7bv3IGYbHis0aum-qoEzpA-Z2PDacgXYLbg/exec'
+          tail -n 20 /tmp/h3 || true
+          head -c 2000 /tmp/b3 || true
+          echo
+          exit 0
+      - name: Install browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Frontend email pipeline audit
+        run: |
+          cat > email-audit.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage({viewport:{width:390,height:844}});
+          const pageErrors=[];
+          const consoleErrors=[];
+          const appRequests=[];
+          page.on('pageerror',e=>pageErrors.push(String(e)));
+          page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(msg.text()); });
+          await page.route('https://script.google.com/**', async route => {
+            const req=route.request();
+            appRequests.push({url:req.url(),method:req.method(),postData:req.postData()});
+            await route.fulfill({status:200,contentType:'text/plain',body:'DIAGNOSTIC_OK'});
+          });
+          await page.route('https://api.qrserver.com/**', async route => {
+            const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X8N9WQAAAABJRU5ErkJggg==','base64');
+            await route.fulfill({status:200,contentType:'image/png',body:png});
+          });
+          await page.goto(`https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?email-audit=${Date.now()}`,{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>typeof window.sendAutomaticEmailNotification==='function' && typeof window.sendCancellationEmailNotification==='function',{timeout:30000});
+          const sample={
+            code:'MS-000000', type:'prenotazione', slotId:'TEST',
+            indirizzo:'Costruzione Ambiente e Territorio (CAT)',
+            stageDay:'Giovedì',stageDate:'10/09/2026',stageTime:'14:30 - 16:30',
+            nome:'Studente Diagnostica',scuola:'Scuola Test',email:'diagnostica@example.invalid',cellulare:'3330000000',
+            exitMode:'ritiro_adulto',parentGuardianName:'Genitore Diagnostica',parentGuardianRole:'genitore',pickupAdultName:'Genitore Diagnostica'
+          };
+          await page.evaluate(s=>window.sendAutomaticEmailNotification(s,false),sample);
+          await page.waitForTimeout(1800);
+          const afterBooking=appRequests.slice();
+          await page.evaluate(s=>window.sendAutomaticEmailNotification(s,true),sample);
+          await page.waitForTimeout(1800);
+          const afterRecovery=appRequests.slice();
+          await page.evaluate(s=>window.sendCancellationEmailNotification(s),sample);
+          await page.waitForTimeout(1200);
+          const afterCancellation=appRequests.slice();
+          console.log('EMAIL_PIPELINE_REPORT='+JSON.stringify({afterBooking,afterRecovery,afterCancellation,pageErrors,consoleErrors}));
+          const confirmationUrl='AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ';
+          const cancellationUrl='AKfwcbw1C_uoalaFlcidMvhqz9zMxSXwqj1nVMo7bv3IGYbHis0aum-qoEzpA-Z2PDacgXYLbg';
+          const confirmCount=afterRecovery.filter(r=>r.url.includes(confirmationUrl)).length;
+          const cancelCount=afterCancellation.filter(r=>r.url.includes(cancellationUrl)).length;
+          console.log(`CONFIRM_REQUEST_COUNT=${confirmCount}`);
+          console.log(`CANCEL_REQUEST_COUNT=${cancelCount}`);
+          if(confirmCount<2) throw new Error('Prenotazione/recupero non raggiungono endpoint conferma');
+          if(cancelCount<1) throw new Error('Cancellazione non raggiunge endpoint cancellazione');
+          await browser.close();
+          console.log('EMAIL_FRONTEND_PIPELINE_OK');
+          NODE
+          node email-audit.mjs
+      - name: Cleanup temporary diagnostic
+        if: always()
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git pull --rebase || true
+          git rm -f .github/workflows/email-diagnostic-final.yml || true
+          git commit -m "Rimuove diagnostica temporanea email MiniStage" || true
+          git push || true
