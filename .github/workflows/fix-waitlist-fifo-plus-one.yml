@@ -1,0 +1,43 @@
+name: Fix waitlist FIFO plus one
+on:
+  push:
+    paths:
+      - 'tools/fix_waitlist_fifo_plus_one.py'
+      - '.github/workflows/fix-waitlist-fifo-plus-one.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply FIFO patch
+        run: python tools/fix_waitlist_fifo_plus_one.py
+      - name: Check JavaScript syntax
+        run: node --check ministage-complete.js && node --check ministage-admin-console-v2.js
+      - name: Verify FIFO +1 rules
+        run: |
+          python - <<'PY'
+          def promoted(active, cap, queue):
+              if queue <= 0 or active >= cap:
+                  return 0
+              limit = cap + 1
+              return min(queue, max(0, limit - active))
+          assert promoted(23,25,10) == 3
+          assert promoted(24,25,10) == 2
+          assert promoted(25,25,10) == 0
+          assert promoted(23,25,2) == 2
+          assert promoted(26,25,10) == 0
+          print('FIFO_PLUS_ONE_LOGIC_OK')
+          PY
+          grep -q "const admissionLimit = cap + 1;" ministage-complete.js
+          grep -q "const next = queue\[0\];" ministage-complete.js
+          grep -q "20260906-fifo-plusone1" index.html
+      - name: Commit final files and cleanup
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-complete.js
+          git rm tools/fix_waitlist_fifo_plus_one.py .github/workflows/fix-waitlist-fifo-plus-one.yml
+          git commit -m "Corregge scorrimento FIFO con tolleranza di un posto"
+          git push
