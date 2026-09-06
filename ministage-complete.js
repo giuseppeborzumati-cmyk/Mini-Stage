@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-licei-separati-v8';
+  const VERSION = '2026.09-waitlist-fifo-plusone-v9';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -60,7 +60,10 @@
   function queueFor(slotId, source = bookings) {
     return source
       .filter(b => b.slotId === slotId && b.type === WAITLIST)
-      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      .sort((a, b) => {
+        const byTime = (a.timestamp || 0) - (b.timestamp || 0);
+        return byTime || String(a.code || '').localeCompare(String(b.code || ''));
+      });
   }
 
   function capacityFor(slot) {
@@ -661,7 +664,7 @@
   }
   window.downloadCurrentMiniStagePdf = downloadCurrentMiniStagePdf;
 
-  async function promoteNext(slot) {
+  async function promoteNext(slot, admissionLimit = null) {
     if (!slot || slot.active === false) return false;
     const locked = await acquireLock(slot.id);
     if (!locked) return false;
@@ -672,7 +675,9 @@
       const capMap = {}; capRows.forEach(x=>{if(x.indirizzo)capMap[x.indirizzo]=Number(x.postiMax||DEFAULT_CAPACITY)});
       const max = Math.max(1, Number(slot.postiMax || capMap[slot.indirizzo] || DEFAULT_CAPACITY));
       const queue = queueFor(slot.id, fresh);
-      if (!queue.length || active >= max) return false;
+      const limit = Number.isFinite(Number(admissionLimit)) ? Math.max(max, Number(admissionLimit)) : max;
+      if (!queue.length || active >= limit) return false;
+      // FIFO rigoroso: si ammette sempre e soltanto il primo nominativo cronologico.
       const next = queue[0];
       const ref = f.doc(core.db, `${bookingPath()}/${next.code}`);
       const live = await f.getDoc(ref);
@@ -700,12 +705,22 @@
       await refreshState();
       for (const slot of slots) {
         if (slot.active === false) continue;
+
+        // Lo scorrimento parte soltanto se esiste almeno un posto realmente libero.
+        // Una volta partito, per non spezzare l'ordine della coda è consentito
+        // uno sforamento massimo di una persona rispetto alla capienza ufficiale.
+        const initialFresh = await snapshotCollection(bookingPath());
+        const cap = capacityFor(slot);
+        const initialActive = activeFor(slot.id, initialFresh).length;
+        const initialQueue = queueFor(slot.id, initialFresh);
+        if (!initialQueue.length || initialActive >= cap) continue;
+
+        const admissionLimit = cap + 1;
         for (let i = 0; i < DEFAULT_CAPACITY + 5; i++) {
           const fresh = await snapshotCollection(bookingPath());
           if (!queueFor(slot.id, fresh).length) break;
-          const cap = capacityFor(slot);
-          if (activeFor(slot.id, fresh).length >= cap) break;
-          const done = await promoteNext(slot);
+          if (activeFor(slot.id, fresh).length >= admissionLimit) break;
+          const done = await promoteNext(slot, admissionLimit);
           if (!done) break;
         }
       }
