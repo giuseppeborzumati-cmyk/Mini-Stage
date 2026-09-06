@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-exit-authorization-v2';
+  const VERSION = '2026.09-mobile-email-v3';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -535,7 +535,7 @@
       subject = `MiniStage IIS Primo Levi - Duplicato prenotazione ${res.code}`;
     }
     await fetch(EMAIL_URL, {
-      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({
         email:res.email, nome:first, cognome:rest, codice_prenotazione:res.code,
         pdfBase64:base64, tipo:kind === 'reserve' ? 'iscrizione_con_riserva' : (promoted ? 'ammesso_da_scorrimento' : 'prenotazione'),
