@@ -11,6 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Corregge target protezione stato Uscito
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tools/apply_auto_closure_pergamena_v1.py')
+          s = p.read_text(encoding='utf-8')
+          marker = "# Scanner: un codice di uno studente già uscito non deve poter tornare a Presente.\njs = replace_once(\n    js,\n"
+          replacement = "# Scanner: un codice di uno studente già uscito non deve poter tornare a Presente.\nhtml = replace_once(\n    html,\n"
+          if marker not in s:
+              raise SystemExit('TARGET_FIX_MARKER_NOT_FOUND')
+          p.write_text(s.replace(marker, replacement, 1), encoding='utf-8')
+          print('TARGET_FIX_OK')
+          PY
       - name: Applica patch
         run: python tools/apply_auto_closure_pergamena_v1.py
       - name: Verifica sintassi JavaScript
@@ -21,6 +34,7 @@ jobs:
           ! grep -q "Stampa o Salva PDF" index.html
           grep -q "function processDueClosures" ministage-complete.js
           grep -q "type: EXITED" ministage-complete.js
+          grep -q "booking.type === 'uscito'" index.html
           grep -q "mini-page-closure" ministage-admin-console-v2-original.js
           grep -q "Usciti / pergamena inviata" ministage-admin-console-v2-original.js
           echo AUTO_CLOSURE_CHECK_OK
