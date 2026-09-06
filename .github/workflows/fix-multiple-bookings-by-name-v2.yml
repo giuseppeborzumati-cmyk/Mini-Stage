@@ -1,0 +1,36 @@
+name: Fix multiple bookings by name
+
+on:
+  push:
+    paths:
+      - 'tools/fix_multiple_booking_selection.py'
+      - '.github/workflows/fix-multiple-bookings-by-name-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python tools/fix_multiple_booking_selection.py
+      - name: Check inline JavaScript
+        run: |
+          python -c "from pathlib import Path; import re; s=Path('index.html').read_text(encoding='utf-8'); Path('/tmp/index-inline.js').write_text('\\n'.join(re.findall(r'<script type=\"module\">(.*?)</script>', s, re.S)), encoding='utf-8')"
+          node --check /tmp/index-inline.js
+      - name: Verify behavior
+        run: |
+          grep -q 'manage-booking-matches' index.html
+          grep -q 'renderManageBookingMatches' index.html
+          grep -q 'executeManageBookingAction' index.html
+          if grep -q 'Sono state trovate più prenotazioni con questi dati' index.html; then exit 1; fi
+      - name: Publish
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html
+          git rm tools/fix_multiple_booking_selection.py .github/workflows/fix-multiple-bookings-by-name-v2.yml
+          git commit -m "Permette scelta prenotazione per nome e cognome"
+          git push
