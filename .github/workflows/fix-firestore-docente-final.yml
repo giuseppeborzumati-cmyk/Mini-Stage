@@ -1,0 +1,153 @@
+name: Fix Firestore docente final
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-firestore-docente-final.yml'
+permissions:
+  contents: write
+jobs:
+  fix-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch authenticated Firestore startup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('ministage-admin-console-v2.js')
+          s=p.read_text()
+          s=s.replace("const VERSION = '2026.09-docente-pagine-v5';", "const VERSION = '2026.09-docente-pagine-v6';")
+          old="""    ensureShell();
+              installPublicRenderFix();
+              wrapAdminLogin();
+              subscribe();
+              window.addEventListener('hashchange', handleHash);"""
+          new="""    ensureShell();
+              installPublicRenderFix();
+              wrapAdminLogin();
+              const connectFirestoreWhenAuthenticated = () => {
+                if (core.auth?.currentUser) {
+                  subscribe();
+                  return;
+                }
+                setTimeout(connectFirestoreWhenAuthenticated, 150);
+              };
+              connectFirestoreWhenAuthenticated();
+              window.addEventListener('hashchange', handleHash);"""
+          if old not in s:
+              raise SystemExit('target init block not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          idx=Path('index.html')
+          h=idx.read_text()
+          if 'ministage-admin-console-v2.js?v=20260906m' not in h:
+              raise SystemExit('cache marker m not found')
+          h=h.replace('ministage-admin-console-v2.js?v=20260906m','ministage-admin-console-v2.js?v=20260906n',1)
+          idx.write_text(h)
+          PY
+          node --check ministage-admin-console-v2.js
+          grep -F "2026.09-docente-pagine-v6" ministage-admin-console-v2.js
+          grep -F "core.auth?.currentUser" ministage-admin-console-v2.js
+          grep -F "ministage-admin-console-v2.js?v=20260906n" index.html
+      - name: Publish clean fix
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git rm .github/workflows/fix-firestore-docente-final.yml
+          git add ministage-admin-console-v2.js index.html
+          git commit -m "Attende autenticazione Firebase nell area docente"
+          git push
+      - name: Wait for published fix
+        run: |
+          ok=0
+          for i in $(seq 1 36); do
+            if curl -fsSL "https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?firebasefix=$i-$(date +%s)" | grep -q "ministage-admin-console-v2.js?v=20260906n"; then ok=1; break; fi
+            sleep 5
+          done
+          test "$ok" = "1"
+      - name: Install browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Create live audit
+        run: |
+          mkdir -p tools
+          cat > tools/live-docente-audit.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const results=[];
+          for(const vp of [{name:'mobile',width:390,height:844},{name:'desktop',width:1440,height:1000}]){
+            const page=await browser.newPage({viewport:{width:vp.width,height:vp.height}});
+            const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+            await page.goto(`https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?v=firestore-final-${Date.now()}`,{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForFunction(()=>window.__MINISTAGE_ADMIN_CONSOLE_V2__?.version==='2026.09-docente-pagine-v6',{timeout:30000});
+            await page.waitForFunction(()=>window.__miniStageCore?.auth?.currentUser,{timeout:30000});
+            await page.waitForFunction(()=>Array.from(document.querySelectorAll('[id^="container-"]')).some(el=>/Prenota|Lista d'attesa/.test(el.innerText)),{timeout:30000});
+            await page.evaluate(()=>{
+              document.getElementById('loading-spinner')?.classList.add('hidden');
+              document.getElementById('view-home')?.classList.add('hidden');
+              document.getElementById('view-admin')?.classList.remove('hidden');
+              document.getElementById('admin-dashboard')?.classList.remove('hidden');
+              document.getElementById('mini-admin-console-v2')?.classList.remove('hidden');
+              window.miniTeacherHome();
+            });
+            await page.waitForSelector('#mini-pages-home:not(.hidden)',{timeout:15000});
+            const landingCards=await page.locator('#mini-pages-home button[onclick*="miniTeacherOpenPage"]').count();
+            if(landingCards!==8) throw new Error(`${vp.name}: expected 8 blocks, got ${landingCards}`);
+            const pages=['classes','overview','bookings','calendar','auth','scanner','pdf','data'];
+            const navigation={};
+            for(const name of pages){
+              await page.evaluate(n=>window.miniTeacherOpenPage(n),name);
+              await page.waitForTimeout(60);
+              navigation[name]=await page.evaluate(n=>({visible:!document.getElementById(`mini-page-${n}`).classList.contains('hidden'),count:Array.from(document.querySelectorAll('[data-mini-page]')).filter(x=>!x.classList.contains('hidden')).length}),name);
+              if(!navigation[name].visible||navigation[name].count!==1) throw new Error(`${vp.name}: page isolation ${name}`);
+            }
+            await page.evaluate(()=>{window.miniTeacherOpenPage('bookings');window.miniTeacherBookingSub('active')});
+            const subButtons=await page.locator('[data-book-sub]').count();
+            if(subButtons!==3) throw new Error(`${vp.name}: expected 3 booking subblocks, got ${subButtons}`);
+            const subs={};
+            for(const sub of ['active','wait','cancelled']){
+              await page.evaluate(s=>window.miniTeacherBookingSub(s),sub);
+              subs[sub]=await page.evaluate(s=>({visible:!document.getElementById(`mini-book-sub-${s}`).classList.contains('hidden'),count:Array.from(document.querySelectorAll('[id^="mini-book-sub-"]')).filter(x=>!x.classList.contains('hidden')).length}),sub);
+              if(!subs[sub].visible||subs[sub].count!==1) throw new Error(`${vp.name}: booking subpage ${sub}`);
+            }
+            await page.evaluate(()=>window.miniTeacherOpenPage('calendar'));
+            await page.waitForFunction(()=>document.querySelectorAll('#mini-pages-calendar tr[data-mini-slot]').length>0,{timeout:30000});
+            const calendar=await page.evaluate(()=>Array.from(document.querySelectorAll('#mini-pages-calendar tr[data-mini-slot]')).map(tr=>({id:tr.dataset.miniSlot,active:!!tr.querySelector('[data-field="active"]')?.checked,date:tr.querySelector('[data-field="date"]')?.value||'',time:tr.querySelector('[data-field="time"]')?.value||'',cap:Number(tr.querySelector('[data-field="cap"]')?.value||0),occupied:(tr.querySelectorAll('td')[6]?.innerText||'').trim(),address:(tr.querySelectorAll('td')[1]?.innerText||'').trim()})));
+            if(!calendar.every(r=>r.id)) throw new Error(`${vp.name}: Firebase document id missing`);
+            const capOne=calendar.filter(r=>r.cap===1);
+            const publicCards=await page.evaluate(()=>Array.from(document.querySelectorAll('[id^="container-"] > div')).map(card=>({container:card.parentElement?.id||'',text:card.innerText,action:Array.from(card.querySelectorAll('button')).map(b=>b.innerText).join('|')})));
+            const probe=[];
+            for(const slot of capOne){
+              const dateIt=slot.date.split('-').reverse().join('/');
+              const match=publicCards.find(c=>c.text.includes(dateIt)&&c.text.includes(slot.time));
+              if(!match) throw new Error(`${vp.name}: capacity-1 Firebase date not public ${slot.id}`);
+              const occupied=Number((slot.occupied.split('/')[0]||'0').trim());
+              const expectedWait=occupied>=1;
+              if(expectedWait&&!/Lista d'attesa/.test(match.action)) throw new Error(`${vp.name}: full one-seat test slot lacks waitlist ${slot.id}`);
+              const btn=page.locator(`#${match.container} > div`).filter({hasText:dateIt}).filter({hasText:slot.time}).locator('button').first();
+              await btn.click();
+              await page.waitForSelector('#booking-modal:not(.hidden)',{timeout:10000});
+              const modal=await page.evaluate(()=>({slotId:document.getElementById('modal-slot-id')?.value||'',title:document.getElementById('modal-title')?.innerText||'',confirm:document.getElementById('modal-confirm-btn')?.innerText||'',date:document.getElementById('modal-stage-date')?.value||''}));
+              if(modal.slotId!==slot.id) throw new Error(`${vp.name}: modal slot id mismatch ${slot.id} -> ${modal.slotId}`);
+              if(modal.date!==dateIt) throw new Error(`${vp.name}: modal date mismatch ${slot.id}`);
+              if(expectedWait&&!/riserva|attesa/i.test(`${modal.title} ${modal.confirm}`)) throw new Error(`${vp.name}: full one-seat modal not in waitlist mode ${slot.id}`);
+              probe.push({slot,publicAction:match.action,modal});
+              await page.evaluate(()=>window.closeModal?.());
+            }
+            const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1);
+            if(overflow) throw new Error(`${vp.name}: horizontal overflow`);
+            if(errors.length) throw new Error(`${vp.name}: page errors ${errors.join(' | ')}`);
+            results.push({viewport:vp,landingCards,navigation,subs,calendarCount:calendar.length,capOne,probe});
+            await page.close();
+          }
+          await browser.close();
+          console.log('DOCENTE_FIRESTORE_FINAL_REPORT='+JSON.stringify(results));
+          console.log('DOCENTE_FIRESTORE_FINAL_OK');
+          NODE
+      - name: Run live audit
+        run: node tools/live-docente-audit.mjs
