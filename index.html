@@ -269,12 +269,12 @@
                         <div class="overflow-y-auto flex-grow compact-scroll space-y-2" id="container-liceo"></div>
                     </div>
 
-                    <!-- Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica -->
+                    <!-- Liceo Scienze Applicate - Curvatura Economica -->
                     <div class="glass-card p-4 flex flex-col h-[260px]">
                         <h4 class="text-xs font-black text-indigo-900 mb-1.5 pb-1 border-b border-indigo-50 flex items-center justify-between">
                             <span class="flex items-center">
                                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-                                LS - Liceo Scienze Applicate - Curvatura Economica
+                                Liceo Scienze Applicate - Curvatura Economica
                             </span>
                             <span class="text-[9px] text-emerald-600 font-bold tracking-wider uppercase">Liceo</span>
                         </h4>
@@ -805,12 +805,13 @@
             "Sistema Moda": "container-moda"
         };
 
-        const LEGACY_LS_COMBINED_LABEL = 'LS - Liceo Scienze Applicate - Curvatura Economica';
-        const NEW_LS_COMBINED_LABEL = 'LS - Liceo Scienze Applicate - Curvatura Economica';
+        const LEGACY_LS_COMBINED_LABEL = 'Liceo Scienze Applicate - Curvatura Economica';
+        const NEW_LS_COMBINED_LABEL = 'Liceo Scienze Applicate - Curvatura Economica';
 
         const INDIRIZZI_LABELS = {
             "Liceo Scientifico - Scienze Applicate": "Liceo Scientifico Scienze Applicate",
-            "LS - Liceo Scienze Applicate - Curvatura Economica": "LS - Liceo Scienze Applicate - Curvatura Economica"
+            "Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica": "Liceo Scienze Applicate - Curvatura Economica",
+            "Liceo Scienze Applicate - Curvatura Economica": "Liceo Scienze Applicate - Curvatura Economica"
         };
         window.getIndirizzoLabel = function(indirizzo) {
             const raw = String(indirizzo || '').trim();
@@ -2216,7 +2217,7 @@
         }
 
     </script>
-    <script src="ministage-complete.js?v=20260906-fifo-plusone1"></script>
-    <script src="ministage-admin-console-v2.js?v=20260907-connectfix2"></script>
+    <script src="ministage-complete.js?v=20260907-curvatura1"></script>
+    <script src="ministage-admin-console-v2.js?v=20260907-curvatura1"></script>
 </body>
 </html>

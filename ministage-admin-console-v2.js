@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CORRECT_LS_LABEL = 'LS - Liceo Scientifico opzione Scienze Applicate - Liceo Scientifico opzione Scienze Applicate - Curvatura Economica';
+  const CORRECT_LS_LABEL = 'Liceo Scienze Applicate - Curvatura Economica';
 
   // Mantiene inalterata la chiave tecnica usata da Firebase e corregge solo
   // la dicitura mostrata all'utente in home, menu, riepiloghi e pannelli.
