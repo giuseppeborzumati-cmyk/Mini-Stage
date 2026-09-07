@@ -29,10 +29,17 @@
     const container = document.getElementById('container-curvatura-economica');
     const heading = container?.closest('.glass-card')?.querySelector('h4 > span.flex.items-center');
     if (heading) {
-      const dot = heading.querySelector('span');
-      heading.textContent = '';
-      if (dot) heading.appendChild(dot);
-      heading.appendChild(document.createTextNode(CORRECT_LS_LABEL));
+      const currentHeadingText = Array.from(heading.childNodes)
+        .filter(node => node.nodeType === Node.TEXT_NODE)
+        .map(node => node.textContent || '')
+        .join('')
+        .trim();
+      if (currentHeadingText !== CORRECT_LS_LABEL) {
+        const dot = heading.querySelector('span');
+        heading.textContent = '';
+        if (dot) heading.appendChild(dot);
+        heading.appendChild(document.createTextNode(CORRECT_LS_LABEL));
+      }
     }
 
     document.querySelectorAll('option, td, th, label, p, span, div').forEach(el => {
