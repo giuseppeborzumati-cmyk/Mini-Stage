@@ -1,0 +1,74 @@
+name: Diagnose MiniStage connectivity
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/diagnose-connectivity.yml'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Diagnose live GitHub Pages
+        run: |
+          cat > /tmp/diag.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage();
+          const consoleLines = [];
+          const pageErrors = [];
+          const failedRequests = [];
+          page.on('console', msg => consoleLines.push(`${msg.type()}: ${msg.text()}`));
+          page.on('pageerror', err => pageErrors.push(String(err)));
+          page.on('requestfailed', req => failedRequests.push(`${req.method()} ${req.url()} :: ${req.failure()?.errorText || ''}`));
+          const url = `https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?diag=${Date.now()}`;
+          let gotoError = '';
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+          } catch (e) { gotoError = String(e); }
+          await page.waitForTimeout(12000);
+          const state = await page.evaluate(async () => {
+            const badge = document.getElementById('conn-badge')?.textContent || '';
+            const spinnerHidden = document.getElementById('loading-spinner')?.classList.contains('hidden') ?? null;
+            const homeHidden = document.getElementById('view-home')?.classList.contains('hidden') ?? null;
+            const core = window.__miniStageCore;
+            const imports = window.firebaseImports;
+            let firestoreProbe = null;
+            if (core?.db && imports?.collection && imports?.getDocs) {
+              try {
+                const p = `artifacts/${core.appId}/public/data/${core.collections?.impostazioni}`;
+                const snap = await imports.getDocs(imports.collection(core.db, p));
+                firestoreProbe = { ok: true, size: snap.size, path: p };
+              } catch (e) {
+                firestoreProbe = { ok: false, name: e?.name || '', code: e?.code || '', message: e?.message || String(e) };
+              }
+            }
+            return {
+              href: location.href,
+              badge,
+              spinnerHidden,
+              homeHidden,
+              firebaseImports: !!imports,
+              core: !!core,
+              authCurrentUser: !!core?.auth?.currentUser,
+              authUid: core?.auth?.currentUser?.uid || null,
+              completeState: window.__MINISTAGE_COMPLETE__ || null,
+              adminState: window.__MINISTAGE_ADMIN_CONSOLE_V2__ || null,
+              firestoreProbe
+            };
+          });
+          console.log('GOTO_ERROR=' + gotoError);
+          console.log('STATE=' + JSON.stringify(state));
+          console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors));
+          console.log('FAILED_REQUESTS=' + JSON.stringify(failedRequests));
+          console.log('CONSOLE=' + JSON.stringify(consoleLines));
+          await browser.close();
+          NODE
+          node /tmp/diag.mjs
