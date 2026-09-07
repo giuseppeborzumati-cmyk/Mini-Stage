@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2026.09-waitlist-fifo-plusone-v9';
+  const VERSION = '2026.09-curvatura-label-v10';
   const WAITLIST = 'lista_attesa';
   const ACTIVE = 'prenotazione';
   const CHECKED = 'entrato';
@@ -13,6 +13,58 @@
   const EMAIL_URL = 'https://script.google.com/macros/s/AKfycby3UI3dEPG9OEzOIHmEK7QLIIUMC6b4yopSFm-twGBV6ZLWtVAZTvmfsa7UxKHFOXfqbQ/exec';
   const DEFAULT_CAPACITY = 25;
   const CURVATURA = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica';
+  const CURVATURA_PUBLIC_LABEL = 'Liceo Scienze Applicate - Curvatura Economica';
+  const CURVATURA_VISIBLE_VARIANTS = [
+    'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica',
+    'Liceo Scientifico - Opzione Scienze Applicate con Curvatura Economica'
+  ];
+
+  function curvaturaPublicLabel(value) {
+    let out = String(value ?? '');
+    CURVATURA_VISIBLE_VARIANTS.forEach(oldLabel => {
+      out = out.split(oldLabel).join(CURVATURA_PUBLIC_LABEL);
+    });
+    return out;
+  }
+
+  function refreshCurvaturaVisibleLabel(root = document.body) {
+    if (!root) return;
+    if (root.nodeType === Node.TEXT_NODE) {
+      const next = curvaturaPublicLabel(root.nodeValue || '');
+      if (next !== root.nodeValue) root.nodeValue = next;
+      return;
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const next = curvaturaPublicLabel(node.nodeValue || '');
+      if (next !== node.nodeValue) node.nodeValue = next;
+    });
+  }
+
+  let curvaturaLabelObserver = null;
+  function installCurvaturaVisibleLabel() {
+    if (!document.body) return;
+    refreshCurvaturaVisibleLabel(document.body);
+    if (curvaturaLabelObserver) return;
+    curvaturaLabelObserver = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'characterData') {
+          refreshCurvaturaVisibleLabel(mutation.target);
+          return;
+        }
+        mutation.addedNodes.forEach(node => refreshCurvaturaVisibleLabel(node));
+      });
+    });
+    curvaturaLabelObserver.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installCurvaturaVisibleLabel, { once: true });
+  } else {
+    queueMicrotask(installCurvaturaVisibleLabel);
+  }
   const ownerId = `WEB-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
   const defaultClasses = {
