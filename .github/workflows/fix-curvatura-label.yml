@@ -1,0 +1,74 @@
+name: Correggi denominazione Curvatura Economica
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-curvatura-label.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Correggi etichetta in tutta l'interfaccia
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          desired = 'Liceo Scienze Applicate - Curvatura Economica'
+          technical = 'Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica'
+
+          idx = Path('index.html')
+          s = idx.read_text(encoding='utf-8')
+
+          # Titolo visibile della card.
+          s = s.replace('LS - Liceo Scienze Applicate - Curvatura Economica', desired)
+
+          # Etichetta pubblica canonica: i dati Firebase mantengono la chiave tecnica storica.
+          s = re.sub(r"const NEW_LS_COMBINED_LABEL = '.*?';", f"const NEW_LS_COMBINED_LABEL = '{desired}';", s, count=1)
+
+          marker = 'const INDIRIZZI_LABELS = {'
+          if marker in s and f'"{technical}": "{desired}"' not in s:
+              s = s.replace(
+                  'const INDIRIZZI_LABELS = {\n            "Liceo Scientifico - Scienze Applicate": "Liceo Scientifico Scienze Applicate",',
+                  'const INDIRIZZI_LABELS = {\n            "Liceo Scientifico - Scienze Applicate": "Liceo Scientifico Scienze Applicate",\n            "' + technical + '": "' + desired + '",',
+                  1
+              )
+
+          # Eventuali alias storici devono comunque mostrare la nuova dicitura.
+          s = s.replace('"LS - Liceo Scienze Applicate - Curvatura Economica": "LS - Liceo Scienze Applicate - Curvatura Economica"',
+                        '"LS - Liceo Scienze Applicate - Curvatura Economica": "' + desired + '"')
+
+          # Aggiorna il commento della card e forza una nuova cache degli script.
+          s = s.replace('<!-- Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica -->',
+                        '<!-- Liceo Scienze Applicate - Curvatura Economica -->')
+          s = re.sub(r'(ministage-complete\.js\?v=)[^"\']+', r'\g<1>20260907-curvatura1', s)
+          s = re.sub(r'(ministage-admin-console-v2\.js\?v=)[^"\']+', r'\g<1>20260907-curvatura1', s)
+          idx.write_text(s, encoding='utf-8')
+
+          wrapper = Path('ministage-admin-console-v2.js')
+          w = wrapper.read_text(encoding='utf-8')
+          w = re.sub(r"const CORRECT_LS_LABEL = '.*?';", f"const CORRECT_LS_LABEL = '{desired}';", w, count=1)
+          wrapper.write_text(w, encoding='utf-8')
+
+          # Verifiche statiche.
+          assert desired in s
+          assert f'"{technical}": "{desired}"' in s
+          assert f"const CORRECT_LS_LABEL = '{desired}';" in w
+          assert 'LS - Liceo Scienze Applicate - Curvatura Economica\n' not in s
+          print('CURVATURA_LABEL_OK')
+          PY
+      - name: Verifica sintassi JavaScript
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          node --check ministage-admin-console-v2-original.js
+      - name: Pubblica correzione e rimuove workflow temporaneo
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-admin-console-v2.js
+          git rm .github/workflows/fix-curvatura-label.yml
+          git commit -m "Uniforma nome Liceo Scienze Applicate Curvatura Economica"
+          git push
