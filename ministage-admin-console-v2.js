@@ -20,7 +20,7 @@
   function loadPdfDateExtension() {
     if (document.querySelector('script[data-mini-pdf-date-extension]')) return;
     const ext = document.createElement('script');
-    ext.src = 'ministage-pdf-date-extension.js?v=20260906-pdfdate2';
+    ext.src = 'ministage-pdf-date-extension.js?v=20260907-label1';
     ext.async = false;
     ext.dataset.miniPdfDateExtension = '1';
     document.body.appendChild(ext);
@@ -28,7 +28,7 @@
 
   // Conserva e carica integralmente il pannello docente attuale.
   const adminScript = document.createElement('script');
-  adminScript.src = 'ministage-admin-console-v2-original.js?v=20260906-licei1';
+  adminScript.src = 'ministage-admin-console-v2-original.js?v=20260907-label1';
   adminScript.async = false;
   adminScript.addEventListener('load', loadPdfDateExtension, { once: true });
   document.body.appendChild(adminScript);

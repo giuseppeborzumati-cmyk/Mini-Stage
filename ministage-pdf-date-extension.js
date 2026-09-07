@@ -56,6 +56,12 @@
     };
   }
 
+  function displayAddress(address) {
+    const raw = String(address || '').trim();
+    if (typeof window.getIndirizzoLabel === 'function') return window.getIndirizzoLabel(raw);
+    return raw.replace(/Scienze Applicate\s*(?:&|&amp;)\s*Curvatura Economica/gi, 'Scienze Applicate - Curvatura Economica');
+  }
+
   function shortAddress(address) {
     const a = String(address || '').trim();
     if (a === 'Liceo Scientifico - Scienze Applicate') return 'Liceo Scienze Applicate';
@@ -228,7 +234,7 @@
     pdf.setFont('Helvetica', 'normal');
     pdf.setFontSize(8.5);
     pdf.setTextColor(70, 70, 85);
-    pdf.text(`Percorso: ${slot.indirizzo}`, 10, 30, { maxWidth: 270 });
+    pdf.text(`Percorso: ${displayAddress(slot.indirizzo)}`, 10, 30, { maxWidth: 270 });
     pdf.text(`Data: ${slot.day || weekdayIt(slot.isoDate)} ${slot.dateStr || dateIt(slot.isoDate)}    Orario: ${slot.time}`, 10, 36);
     pdf.text(`Partecipanti confermati/presenti/usciti: ${rows.length}    Lista d'attesa: ${wait}`, 10, 42);
     drawTable(pdf, rows, 48);
