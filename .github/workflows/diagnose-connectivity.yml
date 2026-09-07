@@ -9,13 +9,14 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Diagnose live GitHub Pages
         run: |
           cat > diag.mjs <<'NODE'
@@ -25,13 +26,18 @@ jobs:
           const consoleLines = [];
           const pageErrors = [];
           const failedRequests = [];
+          const firebaseResponses = [];
           page.on('console', msg => consoleLines.push(`${msg.type()}: ${msg.text()}`));
           page.on('pageerror', err => pageErrors.push(String(err)));
           page.on('requestfailed', req => failedRequests.push(`${req.method()} ${req.url()} :: ${req.failure()?.errorText || ''}`));
+          page.on('response', res => {
+            const u = res.url();
+            if (/firebase|firestore|googleapis\.com|gstatic\.com/.test(u)) firebaseResponses.push(`${res.status()} ${u}`);
+          });
           const url = `https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?diag=${Date.now()}`;
           let gotoError = '';
           try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
           } catch (e) { gotoError = String(e); }
           await page.waitForTimeout(12000);
           const state = await page.evaluate(async () => {
@@ -42,13 +48,12 @@ jobs:
             const imports = window.firebaseImports;
             let firestoreProbe = null;
             if (core?.db && imports?.collection && imports?.getDocs) {
-              try {
-                const p = `artifacts/${core.appId}/public/data/${core.collections?.impostazioni}`;
-                const snap = await imports.getDocs(imports.collection(core.db, p));
-                firestoreProbe = { ok: true, size: snap.size, path: p };
-              } catch (e) {
-                firestoreProbe = { ok: false, name: e?.name || '', code: e?.code || '', message: e?.message || String(e) };
-              }
+              const p = `artifacts/${core.appId}/public/data/${core.collections?.impostazioni}`;
+              const timeout = new Promise(resolve => setTimeout(() => resolve({ ok: false, code: 'probe-timeout', message: 'Firestore getDocs non ha risposto entro 10 secondi', path: p }), 10000));
+              const probe = imports.getDocs(imports.collection(core.db, p))
+                .then(snap => ({ ok: true, size: snap.size, path: p }))
+                .catch(e => ({ ok: false, name: e?.name || '', code: e?.code || '', message: e?.message || String(e), path: p }));
+              firestoreProbe = await Promise.race([probe, timeout]);
             }
             return {
               href: location.href,
@@ -68,6 +73,7 @@ jobs:
           console.log('STATE=' + JSON.stringify(state));
           console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors));
           console.log('FAILED_REQUESTS=' + JSON.stringify(failedRequests));
+          console.log('FIREBASE_RESPONSES=' + JSON.stringify(firebaseResponses));
           console.log('CONSOLE=' + JSON.stringify(consoleLines));
           await browser.close();
           NODE
