@@ -9,7 +9,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - name: Install Playwright
@@ -26,55 +26,42 @@ jobs:
           const consoleLines = [];
           const pageErrors = [];
           const failedRequests = [];
-          const firebaseResponses = [];
+          const firebaseTraffic = [];
           page.on('console', msg => consoleLines.push(`${msg.type()}: ${msg.text()}`));
           page.on('pageerror', err => pageErrors.push(String(err)));
           page.on('requestfailed', req => failedRequests.push(`${req.method()} ${req.url()} :: ${req.failure()?.errorText || ''}`));
           page.on('response', res => {
             const u = res.url();
-            if (/firebase|firestore|googleapis\.com|gstatic\.com/.test(u)) firebaseResponses.push(`${res.status()} ${u}`);
+            if (/firebase|firestore|identitytoolkit|securetoken|googleapis\.com|gstatic\.com/.test(u)) firebaseTraffic.push(`${res.status()} ${res.request().method()} ${u}`);
           });
           const url = `https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?diag=${Date.now()}`;
           let gotoError = '';
-          try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-          } catch (e) { gotoError = String(e); }
-          await page.waitForTimeout(12000);
-          const state = await page.evaluate(async () => {
-            const badge = document.getElementById('conn-badge')?.textContent || '';
-            const spinnerHidden = document.getElementById('loading-spinner')?.classList.contains('hidden') ?? null;
-            const homeHidden = document.getElementById('view-home')?.classList.contains('hidden') ?? null;
+          try { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }); }
+          catch (e) { gotoError = String(e); }
+          await page.waitForTimeout(18000);
+          const state = await page.evaluate(() => {
             const core = window.__miniStageCore;
-            const imports = window.firebaseImports;
-            let firestoreProbe = null;
-            if (core?.db && imports?.collection && imports?.getDocs) {
-              const p = `artifacts/${core.appId}/public/data/${core.collections?.impostazioni}`;
-              const timeout = new Promise(resolve => setTimeout(() => resolve({ ok: false, code: 'probe-timeout', message: 'Firestore getDocs non ha risposto entro 10 secondi', path: p }), 10000));
-              const probe = imports.getDocs(imports.collection(core.db, p))
-                .then(snap => ({ ok: true, size: snap.size, path: p }))
-                .catch(e => ({ ok: false, name: e?.name || '', code: e?.code || '', message: e?.message || String(e), path: p }));
-              firestoreProbe = await Promise.race([probe, timeout]);
-            }
             return {
               href: location.href,
-              badge,
-              spinnerHidden,
-              homeHidden,
-              firebaseImports: !!imports,
+              badge: document.getElementById('conn-badge')?.textContent || '',
+              spinnerHidden: document.getElementById('loading-spinner')?.classList.contains('hidden') ?? null,
+              homeHidden: document.getElementById('view-home')?.classList.contains('hidden') ?? null,
+              firebaseImports: !!window.firebaseImports,
               core: !!core,
               authCurrentUser: !!core?.auth?.currentUser,
               authUid: core?.auth?.currentUser?.uid || null,
               completeState: window.__MINISTAGE_COMPLETE__ || null,
               adminState: window.__MINISTAGE_ADMIN_CONSOLE_V2__ || null,
-              firestoreProbe
+              visibleStageText: Array.from(document.querySelectorAll('[id^="container-"]')).map(x => x.innerText).join(' | ').slice(0,1500)
             };
           });
           console.log('GOTO_ERROR=' + gotoError);
           console.log('STATE=' + JSON.stringify(state));
           console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors));
           console.log('FAILED_REQUESTS=' + JSON.stringify(failedRequests));
-          console.log('FIREBASE_RESPONSES=' + JSON.stringify(firebaseResponses));
+          console.log('FIREBASE_TRAFFIC=' + JSON.stringify(firebaseTraffic));
           console.log('CONSOLE=' + JSON.stringify(consoleLines));
-          await browser.close();
+          await page.close({ runBeforeUnload: false }).catch(()=>{});
+          await browser.close().catch(()=>{});
           NODE
-          node diag.mjs
+          timeout 70s node diag.mjs
