@@ -18,7 +18,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Diagnose live GitHub Pages
         run: |
-          cat > /tmp/diag.mjs <<'NODE'
+          cat > diag.mjs <<'NODE'
           import { chromium } from 'playwright';
           const browser = await chromium.launch({ headless: true });
           const page = await browser.newPage();
@@ -71,4 +71,4 @@ jobs:
           console.log('CONSOLE=' + JSON.stringify(consoleLines));
           await browser.close();
           NODE
-          node /tmp/diag.mjs
+          node diag.mjs
