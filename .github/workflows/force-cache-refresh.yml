@@ -1,0 +1,74 @@
+name: Force MiniStage cache refresh
+on:
+  push:
+    paths:
+      - '.github/workflows/force-cache-refresh.yml'
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump only script cache marker
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'ministage-admin-console-v2.js?v=20260907-lslabel1'
+          new = 'ministage-admin-console-v2.js?v=20260907-connectfix2'
+          if old not in s:
+              raise SystemExit('cache marker not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          grep -F 'ministage-admin-console-v2.js?v=20260907-connectfix2' index.html
+      - name: Publish minimal fix and remove workflow
+        run: |
+          git config user.name 'giuseppeborzumati-cmyk'
+          git config user.email 'giuseppe.borzumati@leviseregno.edu.it'
+          git rm .github/workflows/force-cache-refresh.yml
+          git add index.html
+          git commit -m 'Forza ricaricamento script connessione MiniStage'
+          git push
+      - name: Wait until GitHub Pages serves new marker
+        run: |
+          ok=0
+          for i in $(seq 1 48); do
+            if curl -fsSL -H 'Cache-Control: no-cache' "https://giuseppeborzumati-cmyk.github.io/Mini-Stage/?cachecheck=$RANDOM-$i" | grep -q 'ministage-admin-console-v2.js?v=20260907-connectfix2'; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = '1'
+      - name: Verify live connection on clean browser
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund >/dev/null 2>&1
+          npx playwright install chromium >/dev/null 2>&1
+          cat > verify.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage();
+          const errors = [];
+          page.on('pageerror', e => errors.push(String(e)));
+          await page.goto('https://giuseppeborzumati-cmyk.github.io/Mini-Stage/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+          await page.waitForFunction(() => document.getElementById('conn-badge')?.textContent?.includes('SISTEMA CONNESSO'), { timeout: 30000 });
+          await page.waitForFunction(() => window.__MINISTAGE_COMPLETE__?.dataReady === true, { timeout: 30000 });
+          const state = await page.evaluate(() => ({
+            badge: document.getElementById('conn-badge')?.textContent || '',
+            auth: !!window.__miniStageCore?.auth?.currentUser,
+            dataReady: window.__MINISTAGE_COMPLETE__?.dataReady === true,
+            slots: window.__miniStageCore?.getSlots?.()?.length ?? -1,
+            script: Array.from(document.scripts).map(s => s.src).find(s => s.includes('ministage-admin-console-v2.js')) || ''
+          }));
+          console.log('MINISTAGE_LIVE=' + JSON.stringify(state));
+          console.log('PAGE_ERRORS=' + JSON.stringify(errors));
+          if (!state.auth || !state.dataReady || !state.script.includes('v=20260907-connectfix2') || errors.length) process.exit(1);
+          await browser.close();
+          NODE
+          node verify.mjs
