@@ -805,11 +805,15 @@
             "Sistema Moda": "container-moda"
         };
 
+        const LEGACY_LS_COMBINED_LABEL = 'LS - Liceo Scientifico (Scienze Applicate & Curvatura Economica)';
+        const NEW_LS_COMBINED_LABEL = 'LS - Liceo Scientifico opzione Scienze Applicate - Liceo Scientifico opzione Scienze Applicate - Curvatura Economica';
+
         const INDIRIZZI_LABELS = {
             "Liceo Scientifico - Scienze Applicate": "Liceo Scientifico Scienze Applicate",
             "Liceo Scientifico - Opzione Scienze Applicate - Curvatura Economica": "Liceo Scientifico Opzione Scienze Applicate - Curvatura Economica"
         };
         window.getIndirizzoLabel = function(indirizzo) {
+            if (String(indirizzo || '').trim() === LEGACY_LS_COMBINED_LABEL) return NEW_LS_COMBINED_LABEL;
             const label = INDIRIZZI_LABELS[indirizzo] || indirizzo || '';
             return String(label).replace(/Scienze Applicate\s*(?:&|&amp;)\s*Curvatura Economica/gi, 'Scienze Applicate - Curvatura Economica');
         };
@@ -2208,6 +2212,6 @@
 
     </script>
     <script src="ministage-complete.js?v=20260906-fifo-plusone1"></script>
-    <script src="ministage-admin-console-v2.js?v=20260906-pdfdate2"></script>
+    <script src="ministage-admin-console-v2.js?v=20260907-lslabel1"></script>
 </body>
 </html>
