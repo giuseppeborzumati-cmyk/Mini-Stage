@@ -1,0 +1,39 @@
+name: Uniforma dicitura liceo MiniStage
+on:
+  push:
+    paths:
+      - 'tools/normalize_liceo_label_v1.py'
+      - '.github/workflows/normalize-liceo-label-v1.yml'
+permissions:
+  contents: write
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Applica nuova dicitura
+        run: python tools/normalize_liceo_label_v1.py
+      - name: Verifica sintassi JavaScript
+        run: |
+          node --check ministage-complete.js
+          node --check ministage-admin-console-v2.js
+          node --check ministage-admin-console-v2-original.js
+          node --check ministage-pdf-date-extension.js
+      - name: Verifica dicitura finale
+        run: |
+          grep -q "LS - Liceo Scientifico opzione Scienze Applicate - Curvatura Economica" index.html
+          ! grep -R -F "Scienze Applicate & Curvatura Economica" --include='*.html' --include='*.js' .
+          ! grep -R -F "Liceo Scientifico opzione Scienze Applicate - Liceo Scientifico opzione Scienze Applicate" --include='*.html' --include='*.js' .
+          echo LABEL_CHECK_OK
+      - name: Pubblica e ripulisce strumenti temporanei
+        run: |
+          git config user.name "giuseppeborzumati-cmyk"
+          git config user.email "giuseppe.borzumati@leviseregno.edu.it"
+          git add index.html ministage-admin-console-v2.js ministage-admin-console-v2-original.js ministage-pdf-date-extension.js ministage-complete.js || true
+          git rm tools/normalize_liceo_label_v1.py .github/workflows/normalize-liceo-label-v1.yml
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica da pubblicare"
+          else
+            git commit -m "Uniforma dicitura liceo in tutto MiniStage"
+            git push
+          fi
